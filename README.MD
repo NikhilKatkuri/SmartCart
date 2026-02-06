@@ -48,11 +48,11 @@ The SmartCart system is designed with a modular architecture that integrates var
 <div style="display:flex; flex-direction:column; gap:80px; margin-top:120px;">
 
 <div>
-<p style="font-size:32px;">Customer Engine</p>
+<p style="font-size:32px; font-weight:500; ">Customer Engine</p>
 <img src='imgs/customer_engine.png' style="width:400px; height:auto;" >
 </div>
 <div>
-<p style="font-size:32px;">Product Engine</p>
+<p style="font-size:32px; font-weight:500; margin-top:50px;">Product Engine</p>
 <img src='imgs/product_engine.png' style="width:400px; height:auto;" >
   </div>
 </div>
