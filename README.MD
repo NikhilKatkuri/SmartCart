@@ -61,11 +61,27 @@ The SmartCart system is designed with a modular architecture that integrates var
 
 ## Technical Stack
 
-- **Programming Language:** TypeScript (Node.js for backend, React for frontend)
-- **LLM Inference:** Ollama for local inference, Gemini/GPT for cloud fallback
-- **Data Storage:** Vector database (Chroma)
-- **API Communication:** RESTful APIs for communication between frontend and backend
-- **Frontend:** React.js, Next.js, Tailwind CSS
+- **Programming Language:**
+  TypeScript (Node.js for backend services, React.js with Next.js for frontend)
+
+- **LLM Inference:**
+  Local inference using Ollama for privacy and low latency, with Gemini / GPT as a controlled cloud fallback when local inference is insufficient.
+
+- **Primary Data Storage:**
+  MongoDB for storing structured product data including product metadata, specifications, pricing, and raw customer reviews.
+
+- **Vector Storage (RAG Layer):**
+  Chroma Vector Database used to store embeddings generated from selected product text fields (such as descriptions and reviews) to enable semantic retrieval during query processing.
+
+- **Embedding Generation:**
+  Sentence-transformer or LLM-based embedding models to convert product text into vector representations before indexing in Chroma.
+
+- **API Communication:**
+  RESTful APIs for communication between frontend, backend services, and AI inference components.
+- **Frontend:**
+  React.js with Next.js for server-side rendering and optimized routing, styled using Tailwind CSS.
+
+Product data is persisted in MongoDB as the system’s source of truth. Vector embeddings are generated on demand for selected product content and indexed in Chroma to support semantic retrieval within the RAG pipeline.
 
 ---
 
