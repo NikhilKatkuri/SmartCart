@@ -23,6 +23,7 @@ const server = async () => {
         console.log(`Server is running in ${NODE_ENV} mode`);
         console.log(`HOST URL: http://${HOST}:${PORT}`);
         console.log(`LOCAL URL: http://localhost:${PORT}`);
+        console.log(`\nAPI URL: http://localhost:${PORT}/api/v1/`);
       });
     }
   } catch (error) {

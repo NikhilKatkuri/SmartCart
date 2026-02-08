@@ -8,6 +8,8 @@ import ExpressMongoSanitize from 'express-mongo-sanitize';
 import sanitizeObject from './config/Sanitize';
 import hpp from 'hpp';
 import cors from 'cors';
+import router from './routes';
+import { globalErrorHandler } from './handlers/errorHandler';
 
 const production_mode = process.env['NODE_ENV'] === 'production' ? true : false;
 
@@ -157,14 +159,9 @@ app.use(
 );
 
 // routes
-const router = express.Router();
-
-router.get('/health', (_req, res) => {
-  res.status(200).json({ status: 'ok' });
-});
-
-router.get('/api/v1', (_req, res) => {
-  res.json({ message: 'API is working!' });
-});
 app.use(router);
+
+// global error handler
+app.use(globalErrorHandler);
+
 export default app;
