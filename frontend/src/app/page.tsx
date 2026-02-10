@@ -2,7 +2,7 @@ import Header from "@/components/Header";
 
 export default function Home() {
   return (
-    <div className="flex h-screen font-sans bg-bg-02">
+    <div className="flex h-screen font-sans bg-bg-02 relative">
       <Header />
     </div>
   );
