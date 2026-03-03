@@ -55,6 +55,7 @@
       "@/types/*": ["src/types/*"],
       "@/schemas/*": ["src/schemas/*"],
       "@/routes/*": ["src/routes/*"],
+      "@/lib/*": ["src/lib/*"],
       "@/controllers/*": ["src/controllers/*"],
       "@/config/*": ["src/config/*"],
       "@/*": ["src/*"]

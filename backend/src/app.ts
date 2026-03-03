@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import { ENV } from './lib/env';
 
 import express from 'express';
 import Limiter from './config/Limiter';
@@ -11,12 +11,10 @@ import cors from 'cors';
 import router from './routes';
 import { globalErrorHandler } from './handlers/errorHandler';
 
-const production_mode = process.env['NODE_ENV'] === 'production' ? true : false;
-
 const app: express.Application = express();
 
 // Trust proxy if behind reverse proxy (like nginx)
-if (production_mode) {
+if (ENV.isProduction) {
   app.set('trust proxy', 1);
 }
 
@@ -26,7 +24,7 @@ app.use(compression());
 // Enhanced Helmet configuration for better security
 app.use(
   helmet({
-    contentSecurityPolicy: production_mode
+    contentSecurityPolicy: ENV.isProduction
       ? {
           directives: {
             defaultSrc: ["'self'"],
@@ -42,7 +40,7 @@ app.use(
         }
       : false, // Disable CSP in development mode
     crossOriginEmbedderPolicy: false,
-    hsts: production_mode
+    hsts: ENV.isProduction
       ? {
           maxAge: 31536000, // 1 year
           includeSubDomains: true,
@@ -67,7 +65,7 @@ app.use((_req, res, next) => {
     'geolocation=(), microphone=(), camera=()'
   );
 
-  if (production_mode) {
+  if (ENV.isProduction) {
     res.setHeader(
       'Strict-Transport-Security',
       'max-age=31536000; includeSubDomains; preload'
@@ -80,9 +78,7 @@ app.use((_req, res, next) => {
 // CORS configuration
 app.use(
   cors({
-    origin: production_mode
-      ? process.env['CLIENT_URL']?.split(',') || false // Support multiple origins
-      : ['http://localhost:3000', 'http://localhost:3001'], // Dev origins
+    origin: ENV.CORS_ORIGINS,
     credentials: true, // Allow cookies
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -110,7 +106,7 @@ app.use(
 );
 
 // rate limit middleware
-app.use(Limiter(production_mode));
+app.use(Limiter(ENV.isProduction));
 
 // Prevent NoSQL injection attacks (body only - Express 5.x compatible)
 app.use((req, _res, next) => {

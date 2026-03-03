@@ -1,29 +1,20 @@
-import 'dotenv/config';
-
+import { ENV } from '@/lib/env.js';
 import app from './app.js';
-
-const { NODE_ENV, PORT, HOST } = process.env;
-const production_mode = NODE_ENV === 'production';
+import connectToDB from './lib/connectToDB.js';
 
 const server = async () => {
   try {
-    if (!PORT && !production_mode) {
-      throw new Error('PORT is not defined in environment variables');
-    }
-    if (!HOST && !production_mode) {
-      throw new Error('HOST is not defined in environment variables');
-    }
-
-    if (production_mode) {
-      app.listen(PORT, () => {
-        console.log(`Server running in production mode on port ${PORT}`);
+    await connectToDB();
+    if (ENV.isProduction) {
+      app.listen(ENV.PORT, () => {
+        console.log(`Server running in production mode on port ${ENV.PORT}`);
       });
     } else {
-      app.listen({ port: PORT, host: HOST }, () => {
-        console.log(`Server is running in ${NODE_ENV} mode`);
-        console.log(`HOST URL: http://${HOST}:${PORT}`);
-        console.log(`LOCAL URL: http://localhost:${PORT}`);
-        console.log(`\nAPI URL: http://localhost:${PORT}/api/v1/`);
+      app.listen({ port: ENV.PORT, host: ENV.HOST }, () => {
+        console.log(`Server is running in ${ENV.NODE_ENV} mode`);
+        console.log(`HOST URL: http://${ENV.HOST}:${ENV.PORT}`);
+        console.log(`LOCAL URL: http://localhost:${ENV.PORT}`);
+        console.log(`\nAPI URL: http://localhost:${ENV.PORT}/api/v1/`);
       });
     }
   } catch (error) {
