@@ -3,6 +3,11 @@ import {
   askProductQuestion,
   getAllProducts,
   getProductById,
+  postProduct,
+  postProductAiContext,
+  postProductReview,
+  postProductVariant,
+  postBulkProducts,
   searchProducts,
 } from '@/controllers/products';
 import express from 'express';
@@ -23,7 +28,22 @@ const notImplementedHandler = (
  * @desc Get all products
  * @access Public
  */
+
 productRouter.get(appendBaseName('/'), errorHandler(getAllProducts));
+
+/**
+ * @route POST /products
+ * @desc Create a new product
+ * @access Public
+ */
+productRouter.post(appendBaseName('/'), errorHandler(postProduct));
+
+/**
+ * @route POST /products/bulk
+ * @desc Create multiple products with reviews, AI context, and variants in bulk
+ * @access Public
+ */
+productRouter.post(appendBaseName('/bulk'), errorHandler(postBulkProducts));
 
 /**
  * @route GET /products/:productId
@@ -104,6 +124,36 @@ productRouter.put(
 productRouter.delete(
   appendBaseName('/:productId'),
   errorHandler(notImplementedHandler)
+);
+
+/**
+ * @route POST /products/:productId/ai_context
+ * @desc Update a product by ID (not implemented)
+ * @access Public
+ */
+productRouter.post(
+  appendBaseName('/:productId/ai_context_text'),
+  errorHandler(postProductAiContext)
+);
+
+/**
+ * @route POST /products/:productId/ai_context
+ * @desc Update a product by ID (not implemented)
+ * @access Public
+ */
+productRouter.post(
+  appendBaseName('/:productId/review'),
+  errorHandler(postProductReview)
+);
+
+/**
+ * @route POST /products/:productId/ai_context
+ * @desc Update a product by ID (not implemented)
+ * @access Public
+ */
+productRouter.post(
+  appendBaseName('/:productId/variants'),
+  errorHandler(postProductVariant)
 );
 
 export default productRouter;
