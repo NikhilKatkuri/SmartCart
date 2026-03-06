@@ -1,8 +1,9 @@
 import { product } from "@/types";
+import Link from "next/link";
 
 const ProductCard = ({ data }: { data: product }) => {
   return (
-    <div className="w-full h-auto rounded-md border border-slate-200 hover:bg-slate-100/50 cursor-pointer p-3">
+    <Link href={`/product/${data.product_id}`} className="w-full h-auto rounded-md border border-slate-200 hover:bg-slate-100/50 cursor-pointer p-3">
       <div className="w-full aspect-video rounded">
         {
           (data.image_url === null) && <div className="w-full aspect-video rounded bg-slate-200 animate-pulse" />
@@ -35,7 +36,7 @@ const ProductCard = ({ data }: { data: product }) => {
         </div>
       </div>
 
-    </div>
+    </Link>
   )
 }
 
