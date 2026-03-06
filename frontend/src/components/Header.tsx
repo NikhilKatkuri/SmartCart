@@ -2,7 +2,7 @@ import Button from "./ui/Button";
 
 function Header() {
   return (
-    <header className=" w-full  *:text-slate-800   px-2 lg:px-4  h-16 bg-bg-01 sticky top-0      z-10">
+    <header className=" w-full  *:text-slate-800   px-2 lg:px-4  h-16 bg-bg-01    z-10">
       <div className="w-full h-full flex items-center justify-between  ">
         {/* left side */}
         <div className="flex items-center gap-2 relative ">

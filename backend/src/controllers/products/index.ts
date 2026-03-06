@@ -10,7 +10,7 @@ import { Request, Response } from 'express';
 
 const getAllProducts = async (_req: Request, res: Response) => {
   const products = await ProductModel.find();
-  return res.status(200).json({ products });
+  return res.status(200).json({ message: "Products fetched successfully", products });
 };
 
 const postProduct = async (req: Request, res: Response) => {
@@ -105,7 +105,7 @@ const getProductById = async (req: Request, res: Response) => {
   if (!product) {
     return res.status(404).json({ message: 'Product not found' });
   }
-  return res.status(200).json({ product });
+  return res.status(200).json({ message: 'Product fetched successfully', product });
 };
 
 const searchProducts = async (_req: Request, res: Response) => {
