@@ -1,67 +1,71 @@
-type Attributes = Record<string, string>;
-
-export interface ProductVariant {
-  product_id: string;
-  attributes: Attributes;
-}
-
-export interface productReviews {
-  product_id: string;
-  reviews: {
-    rating: number;
-    comment: string;
-  };
-}
-
-export interface productAiContext {
-  product_id: string;
-  ai_context_text: string;
-}
-
-export interface product {
-  product_id: string;
+export interface ProductMetadata {
   category: string;
   sub_category: string;
-
   brand: string;
   product_title: string;
-  image_url: string[] | null;
-
-  short_description: string;
-  long_description: string;
-
-  price: number;
-  currency: 'INR' | string;
-  discount_percentage: number;
-  stock_quantity: number;
-  rating: number;
-  review_count: number;
-  specifications: Attributes;
+  Img_URL: string | null;
   tags: string[];
 }
 
-// Product Data Type with reviews, AI context and variants
-export type ProductData = {
+export interface ProductInventory {
   product_id: string;
-  category: string;
-  sub_category: string;
-  brand: string;
-  product_title: string;
-  Img_URL: null;
-  short_description: string;
-  long_description: string;
   price: number;
   currency: string;
   discount_percentage: number;
   stock_quantity: number;
+  variants?: Record<string, string>[];
+}
+
+export interface ProductReview {
+  product_id: string;
+  rating: number;
+  comment: string;
+}
+
+export interface ProductSpecifications {
+  product_id: string;
+  specifications: Record<string, string>;
+}
+
+export interface ProductKnowledgeBase {
+  product_id: string;
+  short_description: string;
+  long_description: string;
   rating: number;
   review_count: number;
-  ai_context_text: string;
-  specifications: Attributes;
-  tags: string[];
-  reviews: {
-    rating: number;
-    comment: string;
-  }[];
-  variants: Attributes[];
-};
+}
+
+export interface product extends ProductMetadata, ProductInventory, ProductKnowledgeBase {
+  product_id: string;
+}
+
+export interface ProductData extends product {
+  ai_context_text?: string;
+  reviews?: ProductReview[];
+  variants?: Record<string, string>[];
+}
+
+export interface FilterOptions {
+  category?: string;
+  sub_category?: string;
+  brand?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minRating?: number;
+  tags?: string[];
+}
+
+export interface PaginationOptions {
+  page: number;
+  limit: number;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}

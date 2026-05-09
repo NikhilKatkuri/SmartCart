@@ -3,6 +3,7 @@ import productRouter from './product';
 
 const router: express.Router = express.Router({ mergeParams: true });
 const baseName = '/api/v1';
+
 router.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok' });
 });

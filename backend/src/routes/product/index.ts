@@ -1,159 +1,172 @@
 import { errorHandler } from '@/handlers/errorHandler';
+import express from 'express';
 import {
-  askProductQuestion,
   getAllProducts,
   getProductById,
-  postProduct,
-  postProductAiContext,
-  postProductReview,
-  postProductVariant,
-  postBulkProducts,
+  getProductByProductId,
   searchProducts,
-} from '@/controllers/products';
-import express from 'express';
+} from '@/controllers/user';
+import {
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  createBulkProducts,
+} from '@/controllers/admin';
+import {
+  analyzeProduct,
+  compareProducts,
+  chatbotAnalysis,
+  featureComparison,
+  checkHealth,
+} from '@/controllers/llm';
 
 const baseName = '/products';
 const appendBaseName = (path: string) => `${baseName}${path}`;
 const productRouter: express.Router = express.Router({ mergeParams: true });
 
-const notImplementedHandler = (
-  _req: express.Request,
-  res: express.Response
-) => {
-  res.status(501).json({ message: 'Not implemented' });
-};
+/**
+ * =========================
+ * HEALTH CHECK
+ * =========================
+ */
+productRouter.get('/health', errorHandler(checkHealth));
+
+/**
+ * =========================
+ * USER ROUTES (Read-only)
+ * =========================
+ */
 
 /**
  * @route GET /products
- * @desc Get all products
+ * @desc Get all products with pagination and filters
+ * @query page, limit, category, sub_category, brand, minPrice, maxPrice, minRating, tags, search
  * @access Public
  */
-
 productRouter.get(appendBaseName('/'), errorHandler(getAllProducts));
 
 /**
- * @route POST /products
- * @desc Create a new product
- * @access Public
- */
-productRouter.post(appendBaseName('/'), errorHandler(postProduct));
-
-/**
- * @route POST /products/bulk
- * @desc Create multiple products with reviews, AI context, and variants in bulk
- * @access Public
- */
-productRouter.post(appendBaseName('/bulk'), errorHandler(postBulkProducts));
-
-/**
- * @route GET /products/:productId
- * @desc Get product by ID
- * @access Public
- */
-productRouter.get(appendBaseName('/:productId'), errorHandler(getProductById));
-
-/**
  * @route GET /products/search
- * @desc Search products by query parameters
+ * @desc Search products by query
+ * @query q, page, limit
  * @access Public
  */
 productRouter.get(appendBaseName('/search'), errorHandler(searchProducts));
 
-/***
- * @route GET /products/compare
- * @desc Compare products based on query parameters
+/**
+ * @route GET /products/:productId
+ * @desc Get product by MongoDB ID with all related data
  * @access Public
  */
 productRouter.get(
-  appendBaseName('/compare'),
-  errorHandler(notImplementedHandler)
+  appendBaseName('/:productId'),
+  errorHandler(getProductById)
 );
 
 /**
- * @route GET /products/:productId/reviews
- * @desc Get reviews for a product
+ * @route GET /products/by-id/:product_id
+ * @desc Get product by product_id with all related data
  * @access Public
  */
 productRouter.get(
-  appendBaseName('/:productId/reviews'),
-  errorHandler(notImplementedHandler)
+  appendBaseName('/by-id/:product_id'),
+  errorHandler(getProductByProductId)
 );
 
 /**
- * @route POST /products/:productId/reviews/summarize
- * @desc Summarize reviews for a product using AI
- * @access Public
+ * =========================
+ * ADMIN ROUTES (Write)
+ * =========================
  */
-productRouter.post(
-  appendBaseName('/:productId/reviews/summarize'),
-  errorHandler(notImplementedHandler)
-);
-
-/**
- * @route POST /products/:productId/ask
- * @desc Ask a question about a product and get an AI-generated answer
- * @access Public
- */
-productRouter.post(
-  appendBaseName('/:productId/ask'),
-  errorHandler(askProductQuestion)
-);
 
 /**
  * @route POST /products
- * @desc Create a new product (not implemented)
- * @access Public
+ * @desc Create a new product (Admin only)
+ * @body { data: product }
+ * @access Admin
  */
-productRouter.post(appendBaseName('/'), errorHandler(notImplementedHandler));
+productRouter.post(appendBaseName('/'), errorHandler(createProduct));
+
+/**
+ * @route POST /products/bulk
+ * @desc Create multiple products with all related data (Admin only)
+ * @body { data: ProductData[] }
+ * @access Admin
+ */
+productRouter.post(
+  appendBaseName('/bulk'),
+  errorHandler(createBulkProducts)
+);
 
 /**
  * @route PUT /products/:productId
- * @desc Update a product by ID (not implemented)
- * @access Public
+ * @desc Update a product by ID (Admin only)
+ * @body { data: Partial<product> }
+ * @access Admin
  */
 productRouter.put(
   appendBaseName('/:productId'),
-  errorHandler(notImplementedHandler)
+  errorHandler(updateProduct)
 );
 
 /**
  * @route DELETE /products/:productId
- * @desc Delete a product by ID (not implemented)
- * @access Public
+ * @desc Delete a product by ID and all related data (Admin only)
+ * @access Admin
  */
 productRouter.delete(
   appendBaseName('/:productId'),
-  errorHandler(notImplementedHandler)
+  errorHandler(deleteProduct)
 );
 
 /**
- * @route POST /products/:productId/ai_context
- * @desc Update a product by ID (not implemented)
+ * =========================
+ * LLM ROUTES (AI Features)
+ * =========================
+ */
+
+/**
+ * @route GET /products/llm/analyze/:product_id
+ * @desc Analyze a single product with AI
+ * @query query (optional user query for analysis)
  * @access Public
  */
-productRouter.post(
-  appendBaseName('/:productId/ai_context_text'),
-  errorHandler(postProductAiContext)
+productRouter.get(
+  appendBaseName('/llm/analyze/:product_id'),
+  errorHandler(analyzeProduct)
 );
 
 /**
- * @route POST /products/:productId/ai_context
- * @desc Update a product by ID (not implemented)
+ * @route POST /products/llm/compare
+ * @desc Compare two products
+ * @body { product_id_1: string, product_id_2: string, aspect?: string }
  * @access Public
  */
 productRouter.post(
-  appendBaseName('/:productId/review'),
-  errorHandler(postProductReview)
+  appendBaseName('/llm/compare'),
+  errorHandler(compareProducts)
 );
 
 /**
- * @route POST /products/:productId/ai_context
- * @desc Update a product by ID (not implemented)
+ * @route POST /products/llm/chat
+ * @desc Chatbot API for detailed product analysis
+ * @body { product_id: string, message: string }
  * @access Public
  */
 productRouter.post(
-  appendBaseName('/:productId/variants'),
-  errorHandler(postProductVariant)
+  appendBaseName('/llm/chat'),
+  errorHandler(chatbotAnalysis)
+);
+
+/**
+ * @route POST /products/llm/feature-compare
+ * @desc Compare features across multiple products
+ * @body { product_ids: string[], feature?: string }
+ * @access Public
+ */
+productRouter.post(
+  appendBaseName('/llm/feature-compare'),
+  errorHandler(featureComparison)
 );
 
 export default productRouter;

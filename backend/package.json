@@ -9,6 +9,7 @@
     "nodemon": "nodemon src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
+    "load-data": "tsx scripts/load-csv-data.ts",
     "prettier": "prettier --write .",
     "prettier:check": "prettier --check .",
     "type-check": "tsc --noEmit",
