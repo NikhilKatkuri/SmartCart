@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ProductGrid } from '@/components/ProductGrid';
 import { productAPI } from '@/lib/api';
 import { Filter } from 'lucide-react';
@@ -42,12 +42,7 @@ export default function HomePage() {
   });
   const [showFilters, setShowFilters] = useState(false);
 
-  // Load products
-  useEffect(() => {
-    loadProducts(1);
-  }, [filters]);
-
-  const loadProducts = async (page: number) => {
+  const loadProducts = useCallback(async (page: number) => {
     setIsLoading(true);
     try {
       const response = await productAPI.getAllProducts({
@@ -68,7 +63,14 @@ export default function HomePage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filters, pagination.limit]);
+  
+  // Load products
+  useEffect(() => {
+    loadProducts(1);
+  }, [filters, loadProducts]);
+
+
 
   const handleLoadMore = () => {
     if (pagination.page < pagination.totalPages) {
@@ -80,7 +82,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-16 px-4">
+      <section className="bg-linear-to-r from-blue-600 to-blue-800 text-white py-16 px-4">
         <div className="max-w-7xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Welcome to SmartCart</h1>
           <p className="text-xl text-blue-100">

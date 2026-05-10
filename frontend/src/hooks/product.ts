@@ -3,7 +3,7 @@ import axios from "axios";
 import { product } from "@/types";
 
 const useProduct = () => {
-    const url = "http://localhost:4000/api/v1/products";
+    const url = "http://localhost:5000/api/v1/products";
 
     const [products, setProducts] = useState<product[]>([]);
     const [loading, setLoading] = useState(true);

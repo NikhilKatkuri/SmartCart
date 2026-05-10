@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useCart } from '@/hooks/useCart';
 import { productAPI } from '@/lib/api';
 import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
@@ -22,11 +22,7 @@ export default function CartPage() {
   const [cartProducts, setCartProducts] = useState<CartProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadCartProducts();
-  }, [cart]);
-
-  const loadCartProducts = async () => {
+  const loadCartProducts = useCallback(async () => {
     setIsLoading(true);
     try {
       const enriched = await Promise.all(
@@ -43,7 +39,7 @@ export default function CartPage() {
                 discount_percentage: product?.discount_percentage || 0,
               },
             };
-          } catch (error) {
+          } catch {
             return item;
           }
         })
@@ -54,7 +50,13 @@ export default function CartPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [cart])
+
+  useEffect(() => {
+    loadCartProducts();
+  }, [cart, loadCartProducts]);
+
+ 
 
   const getTotalPrice = () => {
     return cartProducts.reduce((total, item) => {
@@ -116,7 +118,7 @@ export default function CartPage() {
             {cartProducts.map((item) => {
               const discountedPrice = Math.round(
                 (item.details?.price || 0) *
-                  (1 - (item.details?.discount_percentage || 0) / 100)
+                (1 - (item.details?.discount_percentage || 0) / 100)
               );
               const itemTotal = discountedPrice * item.quantity;
 
@@ -126,7 +128,7 @@ export default function CartPage() {
                   className="bg-white rounded-lg border border-gray-200 p-6 flex gap-4"
                 >
                   {/* Product Image Placeholder */}
-                  <div className="w-24 h-24 bg-gray-100 rounded-lg flex-shrink-0" />
+                  <div className="w-24 h-24 bg-gray-100 rounded-lg shrink-0" />
 
                   {/* Product Details */}
                   <div className="flex-1">

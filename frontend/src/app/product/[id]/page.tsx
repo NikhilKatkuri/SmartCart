@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import {
   ShoppingCart,
@@ -55,11 +55,7 @@ export default function ProductDetailPage() {
   const { toggleWishlist, isInWishlist } = useWishlist();
   const inWishlist = isInWishlist(productId);
 
-  useEffect(() => {
-    loadProduct();
-  }, [productId]);
-
-  const loadProduct = async () => {
+  const loadProduct = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await productAPI.getProductById(productId);
@@ -69,7 +65,13 @@ export default function ProductDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [productId])
+
+  useEffect(() => {
+    loadProduct();
+  }, [loadProduct]);
+
+
 
   if (isLoading) {
     return (
@@ -121,7 +123,7 @@ export default function ProductDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-12">
           {/* Product Image Placeholder */}
           <div>
-            <div className="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center relative overflow-hidden">
+            <div className="aspect-square bg-linear-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center relative overflow-hidden">
               <div className="text-center text-gray-400 px-4">
                 <div className="text-6xl font-bold opacity-10">{product.category}</div>
                 <div className="text-sm opacity-20 mt-4">{product.product_title}</div>
@@ -262,7 +264,7 @@ export default function ProductDetailPage() {
             {/* AI Chat Button */}
             <button
               onClick={() => setIsAIChatOpen(true)}
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all"
+              className="w-full bg-linear-to-r from-purple-600 to-pink-600 text-white py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all"
             >
               💬 Ask AI About This Product
             </button>

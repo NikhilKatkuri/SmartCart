@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useWishlist } from '@/hooks/useCart';
 import { useCart } from '@/hooks/useCart';
 import { productAPI } from '@/lib/api';
@@ -24,11 +24,7 @@ export default function WishlistPage() {
   const [wishlistProducts, setWishlistProducts] = useState<WishlistProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadWishlistProducts();
-  }, [wishlist]);
-
-  const loadWishlistProducts = async () => {
+  const loadWishlistProducts = useCallback(async () => {
     setIsLoading(true);
     try {
       const products = await Promise.all(
@@ -45,7 +41,13 @@ export default function WishlistPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [wishlist]);
+
+  useEffect(() => {
+    loadWishlistProducts();
+  }, [loadWishlistProducts, wishlist]);
+
+
 
   if (isLoading) {
     return (
@@ -102,7 +104,7 @@ export default function WishlistPage() {
                 className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow"
               >
                 {/* Image Placeholder */}
-                <div className="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                <div className="aspect-square bg-linear-to-br from-gray-100 to-gray-200 flex items-center justify-center">
                   <div className="text-gray-400 text-center">
                     <div className="text-3xl font-bold opacity-20">Product</div>
                   </div>

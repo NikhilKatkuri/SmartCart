@@ -100,7 +100,7 @@ export function AIChatSidebar({ productId, isOpen, onClose }: AIChatSidebarProps
       {/* Sidebar */}
       <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl flex flex-col">
         {/* Header */}
-        <div className="border-b border-gray-200 p-4 flex items-center justify-between bg-gradient-to-r from-blue-500 to-blue-600">
+        <div className="border-b border-gray-200 p-4 flex items-center justify-between bg-linear-to-r from-blue-500 to-blue-600">
           <h3 className="font-semibold text-white">AI Assistant</h3>
           <button
             onClick={onClose}

@@ -25,14 +25,13 @@ export default function ComparePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [searchInput, setSearchInput] = useState('');
 
-  const initialProductIds = searchParams.get('products')?.split(',') || [];
-
+  
   useEffect(() => {
+    const initialProductIds = searchParams.get('products')?.split(',') || [];
     if (initialProductIds.length > 0) {
       loadProducts(initialProductIds);
     }
-  }, []);
-
+  }, [searchParams]);
   const loadProducts = async (productIds: string[]) => {
     setIsLoading(true);
     try {
@@ -139,7 +138,7 @@ export default function ComparePage() {
               Add at least one more product to compare
             </p>
             <p className="text-gray-600 mb-6">
-              You've selected {products.length} product. Search for another product above to add it to the comparison.
+              You&apos;ve selected {products.length} product. Search for another product above to add it to the comparison.
             </p>
             <div className="bg-white p-6 rounded-lg border border-gray-200 max-w-2xl mx-auto">
               <div className="mb-4">
@@ -177,7 +176,7 @@ export default function ComparePage() {
                   {products.map((product) => (
                     <td
                       key={product.product_id}
-                      className="p-6 border-b border-gray-200 border-l border-gray-200 text-center"
+                      className="p-6 border-b border-gray-200 border-l text-center"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="text-left">
@@ -207,7 +206,7 @@ export default function ComparePage() {
                     return (
                       <td
                         key={product.product_id}
-                        className="p-6 border-b border-gray-200 border-l border-gray-200 text-center"
+                        className="p-6 border-b border-gray-200 border-l text-center"
                       >
                         <div>
                           <p className="text-2xl font-bold text-gray-900">
@@ -232,7 +231,7 @@ export default function ComparePage() {
                   {products.map((product) => (
                     <td
                       key={product.product_id}
-                      className="p-6 border-b border-gray-200 border-l border-gray-200 text-center"
+                      className="p-6 border-b border-l border-gray-200 text-center"
                     >
                       <p className="text-lg font-bold text-gray-900">{product.rating}★</p>
                       <p className="text-sm text-gray-600">({product.review_count} reviews)</p>
@@ -248,7 +247,7 @@ export default function ComparePage() {
                   {products.map((product) => (
                     <td
                       key={product.product_id}
-                      className="p-6 border-b border-gray-200 border-l border-gray-200 text-center"
+                      className="p-6 border-b border-gray-200 border-l  text-center"
                     >
                       <span
                         className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -274,7 +273,7 @@ export default function ComparePage() {
                     {products.map((product) => (
                       <td
                         key={product.product_id}
-                        className="p-6 border-b border-gray-200 border-l border-gray-200 text-center"
+                        className="p-6 border-b border-gray-200 border-l text-center"
                       >
                         <p className="text-gray-700">
                           {product.specifications?.[spec] || '-'}

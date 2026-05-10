@@ -23,14 +23,6 @@
   --color-btn-ghost-bg-hover: var(--btn-ghost-bg-hover);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background-level-01: #0a0a0a;
-    --background-level-02: var(--color-zinc-900);
-
-    --foreground: #ededed;
-  }
-}
 
 body {
   background: var(--color-bg-02);

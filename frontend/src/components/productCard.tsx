@@ -29,7 +29,7 @@ const ProductCard = ({ data }: { data: Product }) => {
   return (
     <div className="bg-white rounded-lg border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow duration-300">
       {/* Image Placeholder */}
-      <div className="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center relative group">
+      <div className="aspect-square bg-linear-to-br from-gray-100 to-gray-200 flex items-center justify-center relative group">
         <div className="text-gray-400 text-center px-4">
           <div className="text-3xl font-bold opacity-20">{data.category}</div>
           <div className="text-xs opacity-10 mt-2">{data.product_title}</div>
