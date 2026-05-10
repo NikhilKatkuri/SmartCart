@@ -1812,7 +1812,7 @@ const uploadBulkProducts = async (
   try {
     console.log(`📦 Uploading ${productsData.length} products to database...`);
 
-    const response = await fetch(`http://localhost:4000/api/v1/products/bulk`, {
+    const response = await fetch(`http://localhost:5000/api/v1/products/bulk`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
