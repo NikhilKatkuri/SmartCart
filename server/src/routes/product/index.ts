@@ -2,6 +2,7 @@ import { errorHandler } from '@/handlers/errorHandler';
 import express from 'express';
 import {
       getAllProducts,
+      getAllCategories,
       getProductById,
       getProductByProductId,
       searchProducts,
@@ -11,6 +12,10 @@ import {
       updateProduct,
       deleteProduct,
       createBulkProducts,
+      createCategory,
+      createBulkCategories,
+      updateCategory,
+      addSubCategories,
 } from '@/controllers/admin';
 
 const baseName = '/products';
@@ -38,6 +43,13 @@ productRouter.get(appendBaseName('/'), errorHandler(getAllProducts));
  * @access Public
  */
 productRouter.get(appendBaseName('/search'), errorHandler(searchProducts));
+
+/**
+ * @route GET /products/categories
+ * @desc Get all categories with sub-categories
+ * @access Public
+ */
+productRouter.get(appendBaseName('/categories'), errorHandler(getAllCategories));
 
 /**
  * @route GET /products/by-id/:product_id
@@ -82,6 +94,41 @@ productRouter.post(appendBaseName('/'), errorHandler(createProduct));
 productRouter.post(
       appendBaseName('/bulk'),
       errorHandler(createBulkProducts)
+);
+
+/**
+ * @route POST /products/categories
+ * @desc Create a category (Admin only)
+ * @body { name: string, sub_categories?: string[] }
+ * @access Admin
+ */
+productRouter.post(appendBaseName('/categories'), errorHandler(createCategory));
+
+/**
+ * @route POST /products/categories/bulk
+ * @desc Bulk create categories (Admin only)
+ * @body { data: Array<{ name: string, sub_categories?: string[] }> }
+ * @access Admin
+ */
+productRouter.post(appendBaseName('/categories/bulk'), errorHandler(createBulkCategories));
+
+/**
+ * @route PUT /products/categories/:name
+ * @desc Update category and/or sub-categories (Admin only)
+ * @body { new_name?: string, sub_categories?: string[] }
+ * @access Admin
+ */
+productRouter.put(appendBaseName('/categories/:name'), errorHandler(updateCategory));
+
+/**
+ * @route PUT /products/categories/:name/subcategories
+ * @desc Add sub-categories to category (Admin only)
+ * @body { sub_categories: string[] }
+ * @access Admin
+ */
+productRouter.put(
+      appendBaseName('/categories/:name/subcategories'),
+      errorHandler(addSubCategories)
 );
 
 /**

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ProductModel, ReviewModel, SpecificationsModel, KnowledgeBaseModel, VariantModel } from '@/models';
+import { ProductModel, ReviewModel, SpecificationsModel, KnowledgeBaseModel, VariantModel, CategoryModel } from '@/models';
 
 /**
  * User: Get all products with pagination and filters
@@ -202,6 +202,26 @@ export const searchProducts = async (req: Request, res: Response) => {
     console.error('Error searching products:', error);
     return res.status(500).json({
       message: 'Error searching products',
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+};
+
+/**
+ * User: Get all categories
+ */
+export const getAllCategories = async (_req: Request, res: Response) => {
+  try {
+    const categories = await CategoryModel.find({}).sort({ name: 1 }).lean();
+
+    return res.status(200).json({
+      message: 'Categories fetched successfully',
+      data: categories,
+    });
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return res.status(500).json({
+      message: 'Error fetching categories',
       error: error instanceof Error ? error.message : String(error),
     });
   }

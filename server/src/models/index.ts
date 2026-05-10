@@ -6,3 +6,4 @@ export { KnowledgeBaseModel, type IProductKnowledgeBase } from './product/knowle
 export { InventoryModel, type IProductInventory } from './product/inventory';
 export { MetadataModel, type IProductMetadata } from './product/meta';
 export { VariantModel, type IVariant } from './product/variant';
+export { CategoryModel, type ICategory } from './category';

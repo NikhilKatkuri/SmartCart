@@ -32,7 +32,7 @@ const ProductCard = ({ data }: { data: Product }) => {
   const heroTransitionName = `product-${data.product_id}`;
 
   return (
-    <div className="glass-panel group relative rounded-3xl overflow-hidden transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] bg-white border border-gray-50">
+    <div className="glass-panel  group relative  rounded-3xl overflow-hidden transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] bg-white border border-gray-50">
       {/* Media Section */}
       <div
         className="relative aspect-4/5 overflow-hidden bg-gray-50"

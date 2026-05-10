@@ -127,6 +127,11 @@ export const productAPI = {
   searchProducts: async (query: string, limit = 20) => {
     return apiCall<any>(`/products/search?q=${encodeURIComponent(query)}&limit=${limit}`);
   },
+
+  // Get all categories
+  getCategories: async () => {
+    return apiCall<any>('/products/categories');
+  },
 };
 
 /**

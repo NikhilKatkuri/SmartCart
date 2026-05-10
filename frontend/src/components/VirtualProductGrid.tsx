@@ -36,7 +36,7 @@ export function VirtualProductGrid({
 }: VirtualProductGridProps) {
       const containerRef = useRef<HTMLDivElement>(null);
       const [containerWidth, setContainerWidth] = useState(1200);
-      const [gridHeight, setGridHeight] = useState(720);
+      const [gridHeight, setGridHeight] = useState(1256);
 
       useEffect(() => {
             if (!containerRef.current) return;
@@ -56,25 +56,33 @@ export function VirtualProductGrid({
             const updateHeight = () => {
                   setGridHeight(Math.max(520, window.innerHeight - 220));
             };
+
             updateHeight();
             window.addEventListener('resize', updateHeight);
             return () => window.removeEventListener('resize', updateHeight);
       }, []);
 
-      const { columnCount, columnWidth, rowHeight } = useMemo(() => {
-            const columns = containerWidth > 1200 ? 4 : containerWidth > 900 ? 3 : containerWidth > 640 ? 2 : 1;
+      const { columnCount, columnWidth, rowHeight, gap, itemWidth } = useMemo(() => {
             const gap = 24;
-            // Calculate width accurately to avoid horizontal overflow
-            const width = Math.floor((containerWidth - (gap * (columns - 1))) / columns);
+
+            const columnCount =
+                  containerWidth >= 1200 ? 4 :
+                        containerWidth >= 900 ? 3 :
+                              containerWidth >= 640 ? 2 : 1;
+
+            const itemWidth = Math.floor((containerWidth - gap * (columnCount - 1)) / columnCount);
 
             return {
-                  columnCount: columns,
-                  columnWidth: width + (gap / columns), // Distribute gap
-                  rowHeight: 540, // Increased slightly to prevent card cutoff
+                  columnCount,
+                  columnWidth: itemWidth + gap,
+                  rowHeight: 560 + gap,
+                  gap,
+                  itemWidth,
             };
       }, [containerWidth]);
 
       const rowCount = Math.ceil(totalCount / columnCount);
+      const gridWidth = columnCount * columnWidth - gap;
 
       return (
             <div ref={containerRef} className="w-full">
@@ -82,50 +90,56 @@ export function VirtualProductGrid({
                         isItemLoaded={isItemLoaded}
                         itemCount={totalCount}
                         loadMoreItems={loadMoreItems}
+                        
                   >
-                        {({ onItemsRendered, ref }) => (
+                        {({ onItemsRendered, ref }:{ onItemsRendered: (args: any) => void; ref: React.RefObject<any> }) => (
                               <Grid
                                     ref={ref}
                                     height={gridHeight}
-                                    width={containerWidth}
+                                    width={Math.min(containerWidth, gridWidth)}
                                     columnCount={columnCount}
                                     columnWidth={columnWidth}
                                     rowCount={rowCount}
                                     rowHeight={rowHeight}
                                     onItemsRendered={(gridData: GridOnItemsRenderedProps) => {
-                                          // Properly map Grid rows/columns to flat list indices for InfiniteLoader
                                           const {
                                                 visibleRowStartIndex,
                                                 visibleRowStopIndex,
                                                 overscanRowStartIndex,
-                                                overscanRowStopIndex
+                                                overscanRowStopIndex,
                                           } = gridData;
 
                                           onItemsRendered({
                                                 overscanStartIndex: overscanRowStartIndex * columnCount,
-                                                overscanStopIndex: (overscanRowStopIndex + 1) * columnCount - 1,
+                                                overscanStopIndex: Math.min(totalCount - 1, (overscanRowStopIndex + 1) * columnCount - 1),
                                                 visibleStartIndex: visibleRowStartIndex * columnCount,
-                                                visibleStopIndex: (visibleRowStopIndex + 1) * columnCount - 1,
+                                                visibleStopIndex: Math.min(totalCount - 1, (visibleRowStopIndex + 1) * columnCount - 1),
                                           });
                                     }}
                               >
-                                    {({ columnIndex, rowIndex, style }) => {
+                                    {({ columnIndex, rowIndex, style }: { columnIndex: number; rowIndex: number; style: React.CSSProperties }) => {
                                           const index = rowIndex * columnCount + columnIndex;
 
-                                          // Prevent rendering empty cells at the end of the last row
                                           if (index >= totalCount) {
-                                                return <div style={style} />;
+                                                return null;
                                           }
 
                                           const item = products[index];
 
                                           return (
-                                                <div style={{ ...style, padding: 12 }}>
-                                                      {item ? (
-                                                            <ProductCard data={item} />
-                                                      ) : (
-                                                            <SkeletonCard />
-                                                      )}
+                                                <div
+                                                      style={{
+                                                            ...style,
+                                                            paddingRight: columnIndex === columnCount - 1 ? 0 : gap,
+                                                            paddingBottom: gap,
+                                                            width: columnWidth,
+                                                            height: rowHeight,
+                                                            boxSizing: 'border-box',
+                                                      }}
+                                                >
+                                                      <div style={{ width: itemWidth, height: rowHeight - gap }}>
+                                                            {item ? <ProductCard data={item} /> : <SkeletonCard />}
+                                                      </div>
                                                 </div>
                                           );
                                     }}

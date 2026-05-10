@@ -93,6 +93,7 @@ export default function ProductDetailPage() {
           page: 1,
           limit: 8,
           category: product.category,
+          sub_category: product.sub_category,
         });
         const items = (response.data || []) as ProductDetail[];
         const filtered = items.filter((item) => item.product_id !== product.product_id);

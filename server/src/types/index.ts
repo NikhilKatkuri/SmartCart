@@ -7,6 +7,11 @@ export interface ProductMetadata {
   tags: string[];
 }
 
+export interface CategoryData {
+  name: string;
+  sub_categories: string[];
+}
+
 export interface ProductInventory {
   product_id: string;
   price: number;

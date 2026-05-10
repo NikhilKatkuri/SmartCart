@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { AlertCircle, Loader, Plus, Sparkles } from 'lucide-react';
@@ -18,8 +18,16 @@ interface Product {
       review_count: number;
       stock_quantity: number;
       category: string;
+      sub_category: string;
       specifications: Record<string, string>;
+      variants?: Array<{ variant_name: string; variant_value: string }>;
 }
+
+type AIEvent =
+      | { type: 'status'; message?: string }
+      | { type: 'chunk'; data?: { content?: string } }
+      | { type: 'complete' }
+      | { type: string;[key: string]: unknown };
 
 export default function ComparePage() {
       const searchParams = useSearchParams();
@@ -28,19 +36,18 @@ export default function ComparePage() {
       const [searchInput, setSearchInput] = useState('');
       const [aiSummary, setAiSummary] = useState('');
       const [aiStatus, setAiStatus] = useState('');
-
-      // Use a ref to track the last compared product IDs to prevent redundant AI calls
       const lastComparedIds = useRef<string>('');
 
-      const createSessionId = () => {
+      const createSessionId = useCallback(() => {
             if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
                   return crypto.randomUUID();
             }
             return `sc_${Math.random().toString(36).slice(2)}`;
-      };
+      }, []);
 
       const loadProducts = useCallback(async (productIds: string[]) => {
             if (productIds.length === 0) {
+                  setProducts([]);
                   setIsLoading(false);
                   return;
             }
@@ -52,45 +59,23 @@ export default function ComparePage() {
                               productAPI.getProductById(id).then((res) => res.product || res.data)
                         )
                   );
-                  const validProducts = loaded.filter(Boolean).slice(0, 3);
+
+                  const validProducts = loaded.filter(Boolean).slice(0, 3) as Product[];
                   setProducts(validProducts);
             } catch (error) {
                   console.error('Error loading products:', error);
+                  setProducts([]);
             } finally {
                   setIsLoading(false);
             }
       }, []);
 
-      const sideLoadSimilarProducts = useCallback(async (currentProducts: Product[]) => {
-            // Only side-load if we have exactly 1 or 2 products
-            if (currentProducts.length >= 3 || currentProducts.length === 0) return;
-
-            const baseCategory = currentProducts[0].category;
-            try {
-                  const response = await productAPI.getAllProducts({
-                        page: 1,
-                        limit: 6,
-                        category: baseCategory,
-                  });
-
-                  const candidates = (response.data || []).filter(
-                        (item: Product) => !currentProducts.find((p) => p.product_id === item.product_id)
-                  );
-
-                  if (candidates.length > 0) {
-                        setProducts(prev => {
-                              const merged = [...prev, ...candidates];
-                              return merged.slice(0, 3);
-                        });
-                  }
-            } catch (error) {
-                  console.error('Error loading similar products:', error);
-            }
-      }, []);
 
       const loadAICompare = useCallback(async (items: Product[]) => {
-            const idsString = items.map(p => p.product_id).sort().join(',');
-            if (items.length < 2 || lastComparedIds.current === idsString) return;
+            if (items.length < 2) return;
+
+            const idsString = items.map((p) => p.product_id).sort().join(',');
+            if (lastComparedIds.current === idsString) return;
 
             lastComparedIds.current = idsString;
             setAiSummary('');
@@ -101,13 +86,15 @@ export default function ComparePage() {
                         productIds: items.map((item) => item.product_id),
                         sessionId: createSessionId(),
                         query: 'Compare the key strengths, trade-offs, and best-fit use cases for each product.',
-                        onEvent: (event: unknown) => {
+                        onEvent: (event: AIEvent) => {
                               if (event.type === 'status') {
                                     setAiStatus(event.message || 'Thinking...');
                               }
+
                               if (event.type === 'chunk' && event.data?.content) {
-                                    setAiSummary((prev) => `${prev}${event.data.content}`);
+                                    setAiSummary((prev) => `${prev}${event.data?.content || ''}`);
                               }
+
                               if (event.type === 'complete') {
                                     setAiStatus('');
                               }
@@ -117,56 +104,75 @@ export default function ComparePage() {
                   console.error('Error loading AI comparison:', error);
                   setAiStatus('Failed to load AI comparison.');
             }
-      }, []);
+      }, [createSessionId]);
 
-      // Effect 1: Initial Load from URL
       useEffect(() => {
             const query = searchParams.get('products');
             if (query) {
-                  const initialProductIds = query.split(',');
+                  const initialProductIds = query
+                        .split(',')
+                        .map((id) => id.trim())
+                        .filter(Boolean);
+
                   loadProducts(initialProductIds);
             } else {
                   setIsLoading(false);
+                  setProducts([]);
             }
       }, [searchParams, loadProducts]);
 
-      // Effect 2: Logic for AI comparison and Side-loading
       useEffect(() => {
-            if (products.length > 0 && products.length < 3) {
-                  sideLoadSimilarProducts(products);
-            }
             if (products.length >= 2) {
                   loadAICompare(products);
             }
-      }, [products.length, sideLoadSimilarProducts, loadAICompare, products]);
-      // Dependency on products.length to avoid unnecessary re-triggers
+      }, [products, loadAICompare]);
 
       const addProduct = async () => {
-            if (!searchInput.trim() || products.length >= 3) return;
+            const term = searchInput.trim();
+            if (!term || products.length >= 3) return;
 
             try {
-                  const results = await productAPI.searchProducts(searchInput, 5);
-                  if (results.data && results.data.length > 0) {
-                        const newProduct = results.data[0];
-                        if (!products.find((p) => p.product_id === newProduct.product_id)) {
-                              setProducts(prev => [...prev, newProduct].slice(0, 3));
-                              setSearchInput('');
-                        }
-                  }
+                  const results = await productAPI.searchProducts(term, 5);
+                  const candidates = results.data || [];
+
+                  if (candidates.length === 0) return;
+
+                  const baseCategory = products[0]?.category;
+                  const baseSubCategory = products[0]?.sub_category;
+
+                  const newProduct =
+                        products.length === 0
+                              ? candidates[0]
+                              : candidates.find(
+                                    (item: Product) =>
+                                          item.category === baseCategory && item.sub_category === baseSubCategory
+                              );
+
+                  if (!newProduct) return;
+                  if (products.some((p) => p.product_id === newProduct.product_id)) return;
+
+                  setProducts((prev) => [...prev, newProduct].slice(0, 3));
+                  setSearchInput('');
+                  lastComparedIds.current = '';
             } catch (error) {
                   console.error('Error searching products:', error);
             }
       };
 
       const removeProduct = (productId: string) => {
-            setProducts(prev => prev.filter((p) => p.product_id !== productId));
+            setProducts((prev) => prev.filter((p) => p.product_id !== productId));
+            lastComparedIds.current = '';
       };
 
-      const commonSpecifications = products.reduce((acc, product) => {
-            const keys = Object.keys(product.specifications || {});
-            if (acc.length === 0) return keys;
-            return acc.filter((key) => keys.includes(key));
-      }, [] as string[]);
+      const commonSpecifications = useMemo(() => {
+            if (products.length === 0) return [];
+
+            return products.reduce((acc, product) => {
+                  const keys = Object.keys(product.specifications || {});
+                  if (acc.length === 0) return keys;
+                  return acc.filter((key) => keys.includes(key));
+            }, [] as string[]);
+      }, [products]);
 
       if (isLoading && products.length === 0) {
             return (
@@ -195,7 +201,7 @@ export default function ComparePage() {
                   <div className="space-y-2">
                         <p className="uppercase tracking-[0.4em] text-xs text-muted">Smart Comparison</p>
                         <h1 className="text-4xl font-semibold">Compare products at a glance.</h1>
-                        <p className="text-muted">We side-load similar products and highlight what truly differs.</p>
+                        <p className="text-muted">Add related products and highlight what truly differs.</p>
                   </div>
 
                   {products.length < 3 && (
@@ -220,13 +226,26 @@ export default function ComparePage() {
                         </div>
                   )}
 
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div
+                        className="grid grid-cols-1 gap-6 lg:grid-cols-none"
+                        style={{
+                              gridTemplateColumns:
+                                    typeof window === 'undefined'
+                                          ? undefined
+                                          : window.innerWidth >= 1024
+                                                ? `repeat(${Math.min(products.length || 1, 3)}, minmax(0, 1fr))`
+                                                : undefined,
+                        }}
+                  >
                         {products.map((product) => (
                               <div key={product.product_id} className="glass-panel rounded-3xl p-6 space-y-3">
                                     <div className="flex items-start justify-between gap-3">
                                           <div>
                                                 <p className="text-xs uppercase tracking-[0.3em] text-muted">{product.brand}</p>
                                                 <h2 className="text-lg font-semibold">{product.product_title}</h2>
+                                                <p className="text-xs text-muted">
+                                                      {product.category} · {product.sub_category}
+                                                </p>
                                           </div>
                                           <button
                                                 onClick={() => removeProduct(product.product_id)}
@@ -235,36 +254,47 @@ export default function ComparePage() {
                                                 Remove
                                           </button>
                                     </div>
+
                                     <div className="text-sm text-muted">
-                                          {product.currency}{Math.round(product.price * (1 - product.discount_percentage / 100)).toLocaleString()}
+                                          {product.currency}
+                                          {Math.round(product.price * (1 - product.discount_percentage / 100)).toLocaleString()}
                                           <span className="ml-2 text-xs line-through">
-                                                {product.currency}{product.price.toLocaleString()}
+                                                {product.currency}
+                                                {product.price.toLocaleString()}
                                           </span>
                                     </div>
+
                                     <div className="text-xs text-muted">
                                           {product.rating} stars · {product.review_count} reviews
                                     </div>
+
+                                    {product.variants && product.variants.length > 0 && (
+                                          <div className="text-xs text-muted">
+                                                Variants:{' '}
+                                                {product.variants
+                                                      .slice(0, 3)
+                                                      .map((variant) => `${variant.variant_name}: ${variant.variant_value}`)
+                                                      .join(' · ')}
+                                          </div>
+                                    )}
                               </div>
                         ))}
                   </div>
 
                   <div className="glass-panel rounded-3xl p-8 space-y-6 border border-white/20">
                         <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted font-semibold">
-                              <Sparkles size={14} className={aiStatus ? "animate-pulse" : ""} />
+                              <Sparkles size={14} className={aiStatus ? 'animate-pulse' : ''} />
                               AI Analysis
                         </div>
 
                         {aiStatus && (
-                              <p className="text-sm text-muted animate-pulse italic">
-                                    {aiStatus}
-                              </p>
+                              <p className="text-sm text-muted animate-pulse italic">{aiStatus}</p>
                         )}
 
                         <div className="prose prose-sm prose-neutral max-w-none">
                               {aiSummary ? (
                                     <ReactMarkdown
                                           components={{
-                                                // Custom styling for markdown elements to keep it "clean"
                                                 p: ({ children }) => <p className="text-sm leading-relaxed text-black/80 mb-4">{children}</p>,
                                                 strong: ({ children }) => <strong className="font-semibold text-black">{children}</strong>,
                                                 ul: ({ children }) => <ul className="list-disc pl-5 space-y-2 mb-4">{children}</ul>,
@@ -284,7 +314,6 @@ export default function ComparePage() {
                   </div>
 
                   <div className="glass-panel rounded-3xl overflow-hidden border border-white/20 p-3">
-                        {/* Header Row */}
                         <div
                               className="grid border-b border-white/40 text-xs uppercase tracking-[0.3em] text-muted bg-white/5"
                               style={{ gridTemplateColumns: `repeat(${products.length + 1}, minmax(0, 1fr))` }}
@@ -297,7 +326,12 @@ export default function ComparePage() {
                               ))}
                         </div>
 
-                        {/* Specification Rows */}
+                        {commonSpecifications.length === 0 && (
+                              <div className="p-6 text-sm text-muted">
+                                    No common specifications available for these products.
+                              </div>
+                        )}
+
                         {commonSpecifications.map((spec) => {
                               const values = products.map((product) => product.specifications?.[spec] || '—');
                               const allSame = values.every((value) => value === values[0]);
@@ -308,12 +342,10 @@ export default function ComparePage() {
                                           className="grid border-b border-white/10 hover:bg-white/5 transition-colors group"
                                           style={{ gridTemplateColumns: `repeat(${products.length + 1}, minmax(0, 1fr))` }}
                                     >
-                                          {/* Label Column */}
                                           <div className="p-4 text-sm text-muted bg-white/5 border-r border-white/10 font-medium">
                                                 {spec}
                                           </div>
 
-                                          {/* Data Columns */}
                                           {values.map((value, index) => (
                                                 <div key={`${spec}-${index}`} className="p-4 text-sm flex items-center justify-center md:justify-start">
                                                       <span className={allSame ? 'opacity-40' : 'font-medium text-black'}>
