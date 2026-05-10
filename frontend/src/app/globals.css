@@ -1,32 +1,94 @@
 @import "tailwindcss";
 
 :root {
-  --background-level-01: #ffffff;
-  --background-level-02: #f7f7f7;
-
-  --foreground: #171717;
-  --btn-ghost-bg: var(--color-bg-01);
-  --btn-ghost-bg-hover: rgba(0, 0, 0, 0.05);
+  --background-level-01: #f7f7f7;
+  --background-level-02: #eef1f4;
+  --background-level-03: #ffffff;
+  --foreground: #0f1115;
+  --muted: rgba(15, 17, 21, 0.56);
+  --accent: #0d0f12;
+  --line: rgba(15, 17, 21, 0.08);
 }
 
 @theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sg);
+  --font-mono: var(--font-jbm);
   --color-bg-01: var(--background-level-01);
   --color-bg-02: var(--background-level-02);
-
+  --color-bg-03: var(--background-level-03);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-
-  --color-btn-ghost-bg: var(--color-bg-01);
-  --color-btn-ghost-bg-hover: var(--btn-ghost-bg-hover);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-line: var(--line);
 }
 
-
 body {
-  background: var(--color-bg-02);
+  background: radial-gradient(circle at 15% 5%, #ffffff, #f0f2f6 60%, #e9edf2 100%);
   color: var(--color-foreground);
   font-family: var(--font-sans);
+}
+
+.bg-ambient {
+  background: radial-gradient(circle at 10% 0%, #ffffff, #f3f5f9 58%, #eef1f5 100%);
+}
+
+.app-shell {
+  min-height: 100vh;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(238, 241, 245, 0.9));
+}
+
+.text-muted {
+  color: var(--color-muted);
+}
+
+.text-primary {
+  color: var(--color-foreground);
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 18px 40px rgba(15, 17, 21, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.grid-sheen {
+  background-image: linear-gradient(120deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.05));
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(15, 17, 21, 0.08);
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  animation: shimmer 1.6s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+  }
+}
+
+@supports (view-transition-name: product-card) {
+  .product-hero {
+    view-transition-name: product-hero;
+  }
 }
  

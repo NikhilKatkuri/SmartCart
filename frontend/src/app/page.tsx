@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { ProductGrid } from '@/components/ProductGrid';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { productAPI } from '@/lib/api';
-import { Filter } from 'lucide-react';
+import { VirtualProductGrid } from '@/components/VirtualProductGrid';
 
 interface Product {
   product_id: string;
@@ -16,251 +15,140 @@ interface Product {
   stock_quantity: number;
   category: string;
   currency: string;
-}
-
-interface PaginationData {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
+  image_url?: string | null;
+  Img_URL?: string | null;
 }
 
 export default function HomePage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [pagination, setPagination] = useState<PaginationData>({
-    page: 1,
-    limit: 20,
-    total: 0,
-    totalPages: 0,
-  });
+  const pageSize = 40;
+  const [products, setProducts] = useState<Array<Product | undefined>>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [filters, setFilters] = useState({
     category: '',
-    minPrice: '',
-    maxPrice: '',
-    minRating: '',
+    minRating: 0,
   });
-  const [showFilters, setShowFilters] = useState(false);
 
-  const loadProducts = useCallback(async (page: number) => {
+  const loadedPages = useRef(new Set<number>());
+  const loadingPages = useRef(new Set<number>());
+
+  const resetFeed = useCallback(() => {
+    loadedPages.current.clear();
+    loadingPages.current.clear();
+    setProducts([]);
+    setTotalCount(0);
+  }, []);
+
+  const loadPage = useCallback(async (page: number) => {
+    if (loadedPages.current.has(page) || loadingPages.current.has(page)) return;
+    loadingPages.current.add(page);
     setIsLoading(true);
+
     try {
       const response = await productAPI.getAllProducts({
         page,
-        limit: pagination.limit,
+        limit: pageSize,
         ...(filters.category && { category: filters.category }),
-        ...(filters.minPrice && { minPrice: parseInt(filters.minPrice) }),
-        ...(filters.maxPrice && { maxPrice: parseInt(filters.maxPrice) }),
-        ...(filters.minRating && { minRating: parseFloat(filters.minRating) }),
+        ...(filters.minRating > 0 && { minRating: filters.minRating }),
       });
 
-      setProducts(response.data || []);
-      if (response.pagination) {
-        setPagination(response.pagination);
-      }
+      const total = response.pagination?.total || response.data?.length || 0;
+      const nextProducts = response.data || [];
+
+      setTotalCount(total);
+      setProducts((prev) => {
+        const merged = prev.length === total ? [...prev] : Array(total).fill(undefined);
+        const startIndex = (page - 1) * pageSize;
+        nextProducts.forEach((item: Product, idx: number) => {
+          merged[startIndex + idx] = item;
+        });
+        return merged;
+      });
+
+      loadedPages.current.add(page);
     } catch (error) {
       console.error('Error loading products:', error);
     } finally {
+      loadingPages.current.delete(page);
       setIsLoading(false);
     }
-  }, [filters, pagination.limit]);
-  
-  // Load products
-  useEffect(() => {
-    loadProducts(1);
-  }, [filters, loadProducts]);
+  }, [filters.category, filters.minRating]);
 
+  const loadMoreItems = useCallback(async (startIndex: number, stopIndex: number) => {
+    const startPage = Math.floor(startIndex / pageSize) + 1;
+    const endPage = Math.floor(stopIndex / pageSize) + 1;
+    const tasks = [];
 
-
-  const handleLoadMore = () => {
-    if (pagination.page < pagination.totalPages) {
-      const nextPage = pagination.page + 1;
-      loadProducts(nextPage);
+    for (let page = startPage; page <= endPage; page += 1) {
+      tasks.push(loadPage(page));
     }
-  };
+
+    await Promise.all(tasks);
+  }, [loadPage]);
+
+  const isItemLoaded = useCallback((index: number) => {
+    return Boolean(products[index]);
+  }, [products]);
+
+  useEffect(() => {
+    resetFeed();
+    loadPage(1);
+  }, [filters, loadPage, resetFeed]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
-      <section className="bg-linear-to-r from-blue-600 to-blue-800 text-white py-16 px-4">
-        <div className="max-w-7xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Welcome to SmartCart</h1>
-          <p className="text-xl text-blue-100">
-            Discover amazing products with AI-powered recommendations
-          </p>
-        </div>
-      </section>
-
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Filters Bar */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-3xl font-bold text-gray-900">Products</h2>
-            <p className="text-gray-600">
-              Showing {products.length} of {pagination.total} products
+    <div className="min-h-screen">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-10">
+        <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-3">
+            <p className="uppercase tracking-[0.4em] text-xs text-muted">Product Discovery</p>
+            <h1 className="text-4xl md:text-5xl font-semibold leading-tight">
+              A calm, curated feed of products with real signal, not noise.
+            </h1>
+            <p className="text-muted max-w-2xl">
+              Explore a zero-clutter grid with AI-ready product context and instant detail transitions.
             </p>
           </div>
 
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors lg:hidden"
-          >
-            <Filter size={20} />
-            Filters
-          </button>
-        </div>
-
-        {/* Filters Section */}
-        {showFilters && (
-          <div className="mb-8 p-6 bg-white rounded-lg border border-gray-200 lg:hidden">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Electronics, Clothing"
-                  value={filters.category}
-                  onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Min Price</label>
-                  <input
-                    type="number"
-                    placeholder="Min"
-                    value={filters.minPrice}
-                    onChange={(e) => setFilters({ ...filters, minPrice: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Max Price</label>
-                  <input
-                    type="number"
-                    placeholder="Max"
-                    value={filters.maxPrice}
-                    onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Min Rating</label>
-                <select
-                  value={filters.minRating}
-                  onChange={(e) => setFilters({ ...filters, minRating: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Any Rating</option>
-                  <option value="4">4+ Stars</option>
-                  <option value="3">3+ Stars</option>
-                  <option value="2">2+ Stars</option>
-                </select>
-              </div>
-
-              <button
-                onClick={() =>
-                  setFilters({
-                    category: '',
-                    minPrice: '',
-                    maxPrice: '',
-                    minRating: '',
-                  })
-                }
-                className="w-full px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          <div className="glass-panel rounded-3xl px-5 py-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="text-xs uppercase tracking-[0.3em] text-muted">Filters</div>
+              <input
+                type="text"
+                placeholder="Category"
+                value={filters.category}
+                onChange={(e) => setFilters((prev) => ({ ...prev, category: e.target.value }))}
+                className="px-4 py-2 rounded-full border border-white/60 bg-white/80 text-sm"
+              />
+              <select
+                value={filters.minRating}
+                onChange={(e) => setFilters((prev) => ({ ...prev, minRating: Number(e.target.value) }))}
+                className="px-4 py-2 rounded-full border border-white/60 bg-white/80 text-sm"
               >
-                Clear Filters
-              </button>
+                <option value={0}>Any rating</option>
+                <option value={4}>4+ stars</option>
+                <option value={3}>3+ stars</option>
+                <option value={2}>2+ stars</option>
+              </select>
             </div>
-          </div>
-        )}
-
-        {/* Desktop Filters Sidebar + Products Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar Filters - Desktop Only */}
-          <div className="hidden lg:block">
-            <div className="bg-white rounded-lg border border-gray-200 p-6 sticky top-24">
-              <h3 className="font-bold text-lg mb-6">Filters</h3>
-
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                  <input
-                    type="text"
-                    placeholder="Search category"
-                    value={filters.category}
-                    onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Price Range</label>
-                  <div className="space-y-2">
-                    <input
-                      type="number"
-                      placeholder="Min Price"
-                      value={filters.minPrice}
-                      onChange={(e) => setFilters({ ...filters, minPrice: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Max Price"
-                      value={filters.maxPrice}
-                      onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Rating</label>
-                  <select
-                    value={filters.minRating}
-                    onChange={(e) => setFilters({ ...filters, minRating: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  >
-                    <option value="">Any Rating</option>
-                    <option value="4">4+ Stars</option>
-                    <option value="3">3+ Stars</option>
-                    <option value="2">2+ Stars</option>
-                  </select>
-                </div>
-
-                <button
-                  onClick={() =>
-                    setFilters({
-                      category: '',
-                      minPrice: '',
-                      maxPrice: '',
-                      minRating: '',
-                    })
-                  }
-                  className="w-full px-3 py-2 text-sm text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Clear All
-                </button>
-              </div>
+            <div className="text-sm text-muted">
+              {isLoading ? 'Updating feed...' : `${totalCount.toLocaleString()} products`}
             </div>
-          </div>
-
-          {/* Products Grid */}
-          <div className="lg:col-span-3">
-            <ProductGrid
-              products={products}
-              isLoading={isLoading}
-              hasMore={pagination.page < pagination.totalPages}
-              onLoadMore={handleLoadMore}
-            />
           </div>
         </div>
-      </div>
+      </section>
+
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+        {totalCount === 0 && !isLoading ? (
+          <div className="text-center text-muted py-20">No products found.</div>
+        ) : (
+          <VirtualProductGrid
+            products={products}
+            totalCount={totalCount}
+            isItemLoaded={isItemLoaded}
+            loadMoreItems={loadMoreItems}
+          />
+        )}
+      </section>
     </div>
   );
 }

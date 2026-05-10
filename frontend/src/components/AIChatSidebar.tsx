@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { X, Send, Loader } from 'lucide-react';
-import { llmAPI } from '@/lib/api';
+import { X, Send, Loader, Sparkles } from 'lucide-react';
+import { aiAPI } from '@/lib/api';
 import { aiSessionStorage, AIMessage } from '@/lib/storage';
 
 interface AIChatSidebarProps {
@@ -16,9 +16,9 @@ export function AIChatSidebar({ productId, isOpen, onClose }: AIChatSidebarProps
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sessionValid, setSessionValid] = useState(false);
+  const [status, setStatus] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Load session on mount
   useEffect(() => {
     const session = aiSessionStorage.getSession(productId);
     if (session) {
@@ -30,16 +30,14 @@ export function AIChatSidebar({ productId, isOpen, onClose }: AIChatSidebarProps
     }
   }, [productId, isOpen]);
 
-  // Auto scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Check session validity periodically
   useEffect(() => {
     const interval = setInterval(() => {
       setSessionValid(aiSessionStorage.isSessionValid(productId));
-    }, 60000); // Check every minute
+    }, 60000);
 
     return () => clearInterval(interval);
   }, [productId]);
@@ -59,34 +57,76 @@ export function AIChatSidebar({ productId, isOpen, onClose }: AIChatSidebarProps
     aiSessionStorage.addMessage(productId, userMessage);
     setInput('');
     setIsLoading(true);
+    setStatus('Preparing AI context...');
+
+    const assistantMessage: AIMessage = {
+      role: 'assistant',
+      content: '',
+      timestamp: Date.now(),
+    };
+
+    setMessages((prev) => [...prev, assistantMessage]);
+    let assistantContent = '';
 
     try {
-      const response = await llmAPI.chatbotAnalysis(productId, [
-        ...messages.map((msg) => ({
+      const sessionId =
+        aiSessionStorage.getSessionId(productId) ||
+        aiSessionStorage.createSession(productId).sessionId ||
+        `sc_${Date.now()}`;
+
+      await aiAPI.queryProduct({
+        productId,
+        sessionId,
+        query: userMessage.content,
+        conversationHistory: messages.map((msg) => ({
           role: msg.role,
           content: msg.content,
         })),
-        userMessage,
-      ]);
-
-      const assistantMessage: AIMessage = {
-        role: 'assistant',
-        content: response.analysis || response.response || 'Unable to process your request.',
-        timestamp: Date.now(),
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
-      aiSessionStorage.addMessage(productId, assistantMessage);
+        onEvent: (event) => {
+          if (event.type === 'status') {
+            setStatus(event.message || 'Thinking...');
+          }
+          if (event.type === 'chunk' && event.data?.content) {
+            assistantContent += event.data.content;
+            setMessages((prev) => {
+              const updated = [...prev];
+              const lastIndex = updated.length - 1;
+              const lastMessage = updated[lastIndex];
+              if (lastMessage?.role === 'assistant') {
+                updated[lastIndex] = {
+                  ...lastMessage,
+                  content: `${lastMessage.content}${event.data.content}`,
+                };
+              }
+              return updated;
+            });
+          }
+          if (event.type === 'complete') {
+            setStatus('');
+            if (assistantContent.trim()) {
+              aiSessionStorage.addMessage(productId, {
+                role: 'assistant',
+                content: assistantContent.trim(),
+                timestamp: Date.now(),
+              });
+            }
+          }
+        },
+      });
     } catch (error) {
       console.error('Error getting AI response:', error);
-      const errorMessage: AIMessage = {
-        role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.',
-        timestamp: Date.now(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: 'assistant',
+          content: 'Sorry, I encountered an error. Please try again.',
+          timestamp: Date.now(),
+        };
+        return updated;
+      });
     } finally {
       setIsLoading(false);
+      setStatus('');
     }
   };
 
@@ -94,38 +134,23 @@ export function AIChatSidebar({ productId, isOpen, onClose }: AIChatSidebarProps
 
   return (
     <div className="fixed inset-0 z-50">
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
-      {/* Sidebar */}
-      <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl flex flex-col">
-        {/* Header */}
-        <div className="border-b border-gray-200 p-4 flex items-center justify-between bg-linear-to-r from-blue-500 to-blue-600">
-          <h3 className="font-semibold text-white">AI Assistant</h3>
-          <button
-            onClick={onClose}
-            className="text-white hover:bg-white/20 p-1 rounded-lg transition"
-          >
-            <X size={20} />
+      <div className="absolute right-6 top-6 bottom-6 w-full max-w-md glass-panel rounded-3xl overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/40">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Sparkles size={16} />
+            SmartCart AI
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-black">
+            <X size={18} />
           </button>
         </div>
 
-        {/* Session Status */}
-        {!sessionValid && (
-          <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2">
-            <p className="text-xs text-yellow-800">
-              Your session has expired. Please refresh the page to continue.
-            </p>
-          </div>
-        )}
-
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           {messages.length === 0 && (
-            <div className="text-center text-gray-600 py-8">
-              <p className="text-sm">
-                Ask me anything about this product! I can help with specifications, comparisons, and more.
-              </p>
+            <div className="text-sm text-muted">
+              Ask about fit, specs, or whether it matches your needs. I use product reviews and specs.
             </div>
           )}
 
@@ -135,21 +160,22 @@ export function AIChatSidebar({ productId, isOpen, onClose }: AIChatSidebarProps
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-xs px-4 py-2 rounded-lg ${
+                className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm ${
                   message.role === 'user'
-                    ? 'bg-blue-600 text-white rounded-br-none'
-                    : 'bg-white border border-gray-200 text-gray-900 rounded-bl-none'
+                    ? 'bg-black text-white'
+                    : 'bg-white/70 text-black border border-white/40'
                 }`}
               >
-                <p className="text-sm">{message.content}</p>
+                <p className="leading-relaxed whitespace-pre-wrap">{message.content}</p>
               </div>
             </div>
           ))}
 
           {isLoading && (
             <div className="flex justify-start">
-              <div className="bg-white border border-gray-200 px-4 py-3 rounded-lg rounded-bl-none">
-                <Loader size={16} className="animate-spin text-blue-600" />
+              <div className="bg-white/70 text-black px-4 py-3 rounded-2xl text-sm flex items-center gap-2 border border-white/40">
+                <Loader size={14} className="animate-spin" />
+                <span>{status || 'Thinking...'}</span>
               </div>
             </div>
           )}
@@ -157,40 +183,28 @@ export function AIChatSidebar({ productId, isOpen, onClose }: AIChatSidebarProps
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Form */}
-        {sessionValid ? (
-          <form onSubmit={handleSendMessage} className="border-t border-gray-200 p-4 space-y-3">
+        <form onSubmit={handleSendMessage} className="px-6 py-4 border-t border-white/40">
+          {!sessionValid && (
+            <p className="text-xs text-red-600 mb-2">Session expired. Please reload.</p>
+          )}
+          <div className="flex gap-2 items-center">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask about this product..."
-              disabled={isLoading}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+              className="flex-1 px-4 py-2.5 rounded-full border border-white/60 bg-white/80 focus:outline-none focus:ring-2 focus:ring-black/10 text-sm"
+              disabled={!sessionValid}
             />
             <button
               type="submit"
-              disabled={isLoading || !input.trim()}
-              className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400 flex items-center justify-center gap-2"
+              disabled={!sessionValid || isLoading}
+              className="h-10 w-10 rounded-full bg-black text-white flex items-center justify-center hover:bg-black/90 disabled:bg-gray-400"
             >
-              {isLoading ? (
-                <>
-                  <Loader size={16} className="animate-spin" />
-                  Thinking...
-                </>
-              ) : (
-                <>
-                  <Send size={16} />
-                  Send
-                </>
-              )}
+              <Send size={16} />
             </button>
-          </form>
-        ) : (
-          <div className="border-t border-gray-200 p-4 text-center">
-            <p className="text-sm text-gray-600">Session expired</p>
           </div>
-        )}
+        </form>
       </div>
     </div>
   );

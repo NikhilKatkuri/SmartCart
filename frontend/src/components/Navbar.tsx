@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ShoppingCart, Heart, Search, Menu, X } from 'lucide-react';
@@ -22,59 +22,48 @@ export function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <nav className="sticky top-0 z-50 border-b border-white/30 bg-white/70 backdrop-blur-lg">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 font-bold text-xl text-blue-600">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+          <Link href="/" className="flex items-center gap-3 font-semibold text-lg">
+            <div className="w-9 h-9 rounded-2xl bg-black text-white flex items-center justify-center text-sm tracking-[0.2em]">
               SC
             </div>
-            <span className="hidden sm:inline">SmartCart</span>
+            <span>SmartCart</span>
           </Link>
 
-          {/* Search Bar - Center */}
-          <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md mx-8">
+          <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-lg mx-8">
             <div className="relative w-full">
               <input
                 type="text"
-                placeholder="Search products..."
+                placeholder="Search products or brands"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                className="w-full px-4 py-2.5 rounded-2xl bg-white/70 border border-white/60 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-black/10"
               />
               <button
                 type="submit"
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
               >
-                <Search size={20} />
+                <Search size={18} />
               </button>
             </div>
           </form>
 
-          {/* Right Navigation */}
-          <div className="flex items-center gap-1 sm:gap-4">
-            {/* Desktop Navigation */}
-            <div className="hidden lg:flex gap-6">
-              <Link href="/" className="text-gray-700 hover:text-blue-600 transition">
-                Home
-              </Link>
-              <Link href="/products" className="text-gray-700 hover:text-blue-600 transition">
-                Products
-              </Link>
-              <Link href="/about" className="text-gray-700 hover:text-blue-600 transition">
-                About
-              </Link>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="hidden lg:flex items-center gap-6 text-sm text-muted">
+              <Link href="/" className="hover:text-primary">Discovery</Link>
+              <Link href="/compare" className="hover:text-primary">Compare</Link>
+              <Link href="/wishlist" className="hover:text-primary">Wishlist</Link>
             </div>
 
-            {/* Cart & Wishlist Icons */}
             <Link
               href="/wishlist"
-              className="relative p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
+              className="relative p-2 rounded-full hover:bg-black/5 transition"
             >
-              <Heart size={20} />
+              <Heart size={18} />
               {wishlistItems > 0 && (
-                <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-black text-white text-[10px] rounded-full w-5 h-5 flex items-center justify-center">
                   {wishlistItems}
                 </span>
               )}
@@ -82,52 +71,44 @@ export function Navbar() {
 
             <Link
               href="/cart"
-              className="relative p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
+              className="relative p-2 rounded-full hover:bg-black/5 transition"
             >
-              <ShoppingCart size={20} />
+              <ShoppingCart size={18} />
               {cartItems > 0 && (
-                <span className="absolute top-0 right-0 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-black text-white text-[10px] rounded-full w-5 h-5 flex items-center justify-center">
                   {cartItems}
                 </span>
               )}
             </Link>
 
-            {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden p-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+              className="lg:hidden p-2 rounded-full hover:bg-black/5"
             >
-              {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              {isMobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-100 py-4 space-y-3">
+          <div className="md:hidden border-t border-white/40 py-4 space-y-3">
             <form onSubmit={handleSearch} className="px-2">
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Search products..."
+                  placeholder="Search products or brands"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2.5 rounded-2xl bg-white border border-white/60"
                 />
-                <button type="submit" className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                  <Search size={18} className="text-gray-400" />
+                <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <Search size={16} className="text-gray-500" />
                 </button>
               </div>
             </form>
-            <Link href="/" className="block px-4 py-2 text-gray-700 hover:bg-gray-50">
-              Home
-            </Link>
-            <Link href="/products" className="block px-4 py-2 text-gray-700 hover:bg-gray-50">
-              Products
-            </Link>
-            <Link href="/about" className="block px-4 py-2 text-gray-700 hover:bg-gray-50">
-              About
-            </Link>
+            <Link href="/" className="block px-4 py-2 text-sm">Discovery</Link>
+            <Link href="/compare" className="block px-4 py-2 text-sm">Compare</Link>
+            <Link href="/wishlist" className="block px-4 py-2 text-sm">Wishlist</Link>
           </div>
         )}
       </div>

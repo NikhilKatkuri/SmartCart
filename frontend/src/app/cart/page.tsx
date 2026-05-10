@@ -81,25 +81,25 @@ export default function CartPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-600">Loading cart...</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted">Loading cart...</p>
       </div>
     );
   }
 
   if (cart.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="min-h-screen">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="text-center py-20">
-            <ShoppingBag className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Your Cart is Empty</h1>
-            <p className="text-gray-600 mb-6">Add some products to get started</p>
+            <ShoppingBag className="w-12 h-12 text-muted mx-auto mb-4" />
+            <h1 className="text-3xl font-semibold mb-2">Your cart is empty</h1>
+            <p className="text-muted mb-6">Add products to begin checkout.</p>
             <Link
               href="/"
-              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center px-6 py-3 rounded-full bg-black text-white text-sm"
             >
-              Continue Shopping
+              Continue shopping
             </Link>
           </div>
         </div>
@@ -108,12 +108,14 @@ export default function CartPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h1 className="text-4xl font-bold text-gray-900 mb-8">Shopping Cart</h1>
+    <div className="min-h-screen">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="mb-8">
+          <p className="uppercase tracking-[0.4em] text-xs text-muted">Checkout</p>
+          <h1 className="text-4xl font-semibold">Shopping cart</h1>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
             {cartProducts.map((item) => {
               const discountedPrice = Math.round(
@@ -125,22 +127,20 @@ export default function CartPage() {
               return (
                 <div
                   key={item.product_id}
-                  className="bg-white rounded-lg border border-gray-200 p-6 flex gap-4"
+                  className="glass-panel rounded-3xl p-6 flex flex-col md:flex-row md:items-center gap-6"
                 >
-                  {/* Product Image Placeholder */}
-                  <div className="w-24 h-24 bg-gray-100 rounded-lg shrink-0" />
+                  <div className="w-24 h-24 bg-white/70 rounded-2xl shrink-0" />
 
-                  {/* Product Details */}
-                  <div className="flex-1">
-                    <h3 className="font-bold text-gray-900 mb-1">
-                      {item.details?.product_title || `Product ${item.product_id}`}
-                    </h3>
-                    <p className="text-gray-600 text-sm mb-3">
-                      {item.details?.currency}
-                      {discountedPrice.toLocaleString()} each
-                    </p>
+                  <div className="flex-1 space-y-3">
+                    <div>
+                      <h3 className="text-lg font-semibold">
+                        {item.details?.product_title || `Product ${item.product_id}`}
+                      </h3>
+                      <p className="text-sm text-muted">
+                        {item.details?.currency}{discountedPrice.toLocaleString()} each
+                      </p>
+                    </div>
 
-                    {/* Quantity Controls */}
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() =>
@@ -149,34 +149,31 @@ export default function CartPage() {
                             Math.max(1, item.quantity - 1)
                           )
                         }
-                        className="p-1 hover:bg-gray-100 rounded-lg transition"
+                        className="h-8 w-8 rounded-full border border-white/60 bg-white/80"
                       >
-                        <Minus size={16} />
+                        <Minus size={14} />
                       </button>
-                      <span className="px-4 py-1 border border-gray-200 rounded-lg">
+                      <span className="px-4 py-1 rounded-full border border-white/60">
                         {item.quantity}
                       </span>
                       <button
                         onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
-                        className="p-1 hover:bg-gray-100 rounded-lg transition"
+                        className="h-8 w-8 rounded-full border border-white/60 bg-white/80"
                       >
-                        <Plus size={16} />
+                        <Plus size={14} />
                       </button>
                     </div>
                   </div>
 
-                  {/* Price & Remove */}
-                  <div className="text-right flex flex-col justify-between">
-                    <p className="text-2xl font-bold text-gray-900">
-                      {item.details?.currency}
-                      {itemTotal.toLocaleString()}
+                  <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-3">
+                    <p className="text-2xl font-semibold">
+                      {item.details?.currency}{itemTotal.toLocaleString()}
                     </p>
                     <button
                       onClick={() => removeFromCart(item.product_id)}
-                      className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition flex items-center gap-1"
+                      className="text-xs text-muted hover:text-black flex items-center gap-1"
                     >
-                      <Trash2 size={18} />
-                      <span className="text-sm">Remove</span>
+                      <Trash2 size={16} /> Remove
                     </button>
                   </div>
                 </div>
@@ -184,42 +181,41 @@ export default function CartPage() {
             })}
           </div>
 
-          {/* Order Summary */}
           <div>
-            <div className="bg-white rounded-lg border border-gray-200 p-6 sticky top-24">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Order Summary</h2>
+            <div className="glass-panel rounded-3xl p-6 sticky top-24">
+              <h2 className="text-2xl font-semibold mb-6">Order summary</h2>
 
-              <div className="space-y-4 mb-6 pb-6 border-b border-gray-200">
-                <div className="flex justify-between text-gray-600">
-                  <span>Subtotal:</span>
+              <div className="space-y-4 mb-6 pb-6 border-b border-white/30 text-sm">
+                <div className="flex justify-between text-muted">
+                  <span>Subtotal</span>
                   <span>₹{getTotalOriginalPrice().toLocaleString()}</span>
                 </div>
                 {getTotalSavings() > 0 && (
-                  <div className="flex justify-between text-green-600 font-semibold">
-                    <span>Total Savings:</span>
+                  <div className="flex justify-between text-black font-medium">
+                    <span>Savings</span>
                     <span>-₹{getTotalSavings().toLocaleString()}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-gray-600">
-                  <span>Shipping:</span>
+                <div className="flex justify-between text-muted">
+                  <span>Shipping</span>
                   <span>₹0.00</span>
                 </div>
               </div>
 
-              <div className="flex justify-between text-2xl font-bold text-gray-900 mb-6">
-                <span>Total:</span>
+              <div className="flex justify-between text-2xl font-semibold mb-6">
+                <span>Total</span>
                 <span>₹{getTotalPrice().toLocaleString()}</span>
               </div>
 
-              <button className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors mb-3">
-                Proceed to Checkout
+              <button className="w-full bg-black text-white py-3 rounded-full text-sm hover:bg-black/90 transition-colors mb-3">
+                Proceed to checkout
               </button>
 
               <button
                 onClick={clearCart}
-                className="w-full border border-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+                className="w-full border border-white/60 text-muted py-3 rounded-full text-sm hover:text-black hover:border-black/20 transition-colors"
               >
-                Continue Shopping
+                Clear cart
               </button>
             </div>
           </div>

@@ -51,25 +51,25 @@ export default function WishlistPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-600">Loading wishlist...</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted">Loading wishlist...</p>
       </div>
     );
   }
 
   if (wishlist.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="min-h-screen">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="text-center py-20">
-            <Heart className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Your Wishlist is Empty</h1>
-            <p className="text-gray-600 mb-6">Save products you love to your wishlist</p>
+            <Heart className="w-12 h-12 text-muted mx-auto mb-4" />
+            <h1 className="text-3xl font-semibold mb-2">Your wishlist is empty</h1>
+            <p className="text-muted mb-6">Save products you love for later.</p>
             <Link
               href="/"
-              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center px-6 py-3 rounded-full bg-black text-white text-sm"
             >
-              Browse Products
+              Browse products
             </Link>
           </div>
         </div>
@@ -78,17 +78,20 @@ export default function WishlistPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-4xl font-bold text-gray-900">
-            My Wishlist ({wishlistProducts.length} items)
-          </h1>
+    <div className="min-h-screen">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+          <div>
+            <p className="uppercase tracking-[0.4em] text-xs text-muted">Wishlist</p>
+            <h1 className="text-4xl font-semibold">
+              Saved items ({wishlistProducts.length})
+            </h1>
+          </div>
           <button
             onClick={clearWishlist}
-            className="text-red-600 hover:text-red-700 text-sm font-medium"
+            className="text-xs text-muted hover:text-black"
           >
-            Clear Wishlist
+            Clear wishlist
           </button>
         </div>
 
@@ -101,57 +104,49 @@ export default function WishlistPage() {
             return (
               <div
                 key={product.product_id}
-                className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow"
+                className="glass-panel rounded-3xl overflow-hidden"
               >
-                {/* Image Placeholder */}
-                <div className="aspect-square bg-linear-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                  <div className="text-gray-400 text-center">
-                    <div className="text-3xl font-bold opacity-20">Product</div>
-                  </div>
+                <div className="aspect-4/5 bg-white/70 flex items-center justify-center">
+                  <div className="text-xs uppercase tracking-[0.4em] text-muted">Product</div>
                 </div>
 
-                {/* Product Info */}
-                <div className="p-4">
+                <div className="p-5 space-y-4">
                   <Link
                     href={`/product/${product.product_id}`}
-                    className="block font-semibold text-gray-900 hover:text-blue-600 transition-colors line-clamp-2 mb-2"
+                    className="block text-lg font-medium hover:text-black/60 transition-colors line-clamp-2"
                   >
                     {product.product_title}
                   </Link>
 
-                  <p className="text-sm text-gray-600 line-clamp-2 mb-3">
+                  <p className="text-sm text-muted line-clamp-2">
                     {product.short_description}
                   </p>
 
-                  {/* Price */}
-                  <div className="flex items-baseline gap-2 mb-4">
-                    <span className="text-2xl font-bold text-gray-900">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xl font-semibold">
                       {product.currency}{discountedPrice.toLocaleString()}
                     </span>
                     {product.discount_percentage > 0 && (
-                      <span className="text-lg text-gray-400 line-through">
+                      <span className="text-xs text-muted line-through">
                         {product.currency}{product.price.toLocaleString()}
                       </span>
                     )}
                   </div>
 
-                  {/* Actions */}
                   <div className="flex gap-2">
                     <button
                       onClick={() => addToCart(product.product_id)}
                       disabled={product.stock_quantity === 0}
-                      className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-300 flex items-center justify-center gap-2"
+                      className="flex-1 bg-black text-white py-2 rounded-full text-xs hover:bg-black/90 transition-colors disabled:bg-gray-300 flex items-center justify-center gap-2"
                     >
-                      <ShoppingCart size={16} />
-                      <span className="hidden sm:inline">Add</span>
+                      <ShoppingCart size={14} /> Add
                     </button>
 
                     <button
                       onClick={() => removeFromWishlist(product.product_id)}
-                      className="flex-1 border border-red-200 text-red-600 py-2 rounded-lg font-medium hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 border border-white/60 text-muted py-2 rounded-full text-xs hover:text-black hover:border-black/20 transition-colors flex items-center justify-center gap-2"
                     >
-                      <Heart size={16} fill="currentColor" />
-                      <span className="hidden sm:inline">Remove</span>
+                      <Heart size={14} fill="currentColor" /> Remove
                     </button>
                   </div>
                 </div>

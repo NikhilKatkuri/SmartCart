@@ -48,6 +48,50 @@ async function apiCall<T>(
   }
 }
 
+async function streamSSE(
+  endpoint: string,
+  body: object,
+  onEvent: (event: { type: string; data?: any; message?: string }) => void
+): Promise<void> {
+  const url = `${API_BASE_URL}${endpoint}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok || !response.body) {
+    throw new Error(`API Error: ${response.statusText}`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let buffer = '';
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const parts = buffer.split('\n\n');
+    buffer = parts.pop() || '';
+
+    for (const part of parts) {
+      const line = part.split('\n').find((l) => l.startsWith('data: '));
+      if (!line) continue;
+      try {
+        const payload = JSON.parse(line.replace('data: ', '')) as {
+          type: string;
+          data?: any;
+          message?: string;
+        };
+        onEvent(payload);
+      } catch (error) {
+        console.error('Error parsing SSE payload:', error);
+      }
+    }
+  }
+}
+
 /**
  * Product API endpoints
  */
@@ -88,35 +132,37 @@ export const productAPI = {
 /**
  * LLM/AI API endpoints
  */
-export const llmAPI = {
-  // Check health of LLM service
+export const aiAPI = {
   checkHealth: async () => {
-    return apiCall<any>('/products/llm/health');
+    return apiCall<any>('/ai/health');
   },
 
-  // Analyze single product
-  analyzeProduct: async (productId: string, query: string) => {
-    return apiCall<any>('/products/llm/analyze/' + productId, {
-      method: 'POST',
-      body: JSON.stringify({ query }),
-    });
+  queryProduct: async (params: {
+    productId: string;
+    sessionId: string;
+    query: string;
+    conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>;
+    onEvent: (event: { type: string; data?: any; message?: string }) => void;
+  }) => {
+    return streamSSE(`/ai/query/${params.productId}`, {
+      sessionId: params.sessionId,
+      query: params.query,
+      conversationHistory: params.conversationHistory,
+    }, params.onEvent);
   },
 
-  // Compare products
-  compareProducts: async (productIds: string[], aspects?: string[]) => {
-    return apiCall<any>('/products/llm/compare', {
-      method: 'POST',
-      body: JSON.stringify({ product_ids: productIds, aspects }),
-    });
-  },
-
-  // Chatbot analysis
-  chatbotAnalysis: async (productId: string, conversation: any[]) => {
-    return apiCall<any>('/products/llm/chatbot/' + productId, {
-      method: 'POST',
-      body: JSON.stringify({ conversation }),
-    });
+  compareProducts: async (params: {
+    productIds: string[];
+    sessionId: string;
+    query: string;
+    onEvent: (event: { type: string; data?: any; message?: string }) => void;
+  }) => {
+    return streamSSE('/ai/compare', {
+      productIds: params.productIds,
+      sessionId: params.sessionId,
+      query: params.query,
+    }, params.onEvent);
   },
 };
 
-export default { productAPI, llmAPI };
+export default { productAPI, aiAPI };

@@ -44,12 +44,12 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
+    <div className="min-h-screen">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Search Results</h1>
-          <p className="text-gray-600 text-lg">
+          <p className="uppercase tracking-[0.4em] text-xs text-muted">Search</p>
+          <h1 className="text-4xl font-semibold">Search Results</h1>
+          <p className="text-muted text-lg">
             {isLoading ? 'Searching...' : `Found ${products.length} products for "${query}"`}
           </p>
         </div>
@@ -57,8 +57,8 @@ export default function SearchPage() {
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <div className="text-center">
-              <Loader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-              <p className="text-gray-600">Searching products...</p>
+              <Loader className="w-10 h-10 text-black animate-spin mx-auto mb-4" />
+              <p className="text-muted">Searching products...</p>
             </div>
           </div>
         ) : (

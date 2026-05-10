@@ -113,6 +113,13 @@ export const wishlistStorage = {
 const AI_CHAT_SESSION_PREFIX = 'smartcart_ai_chat_';
 const SESSION_EXPIRY_TIME = 60 * 60 * 1000; // 1 hour
 
+const createSessionId = () => {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+  return `sc_${Math.random().toString(36).slice(2)}`;
+};
+
 export interface AIMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -123,6 +130,7 @@ export interface AISession {
   messages: AIMessage[];
   createdAt: number;
   expiresAt: number;
+  sessionId?: string;
 }
 
 export const aiSessionStorage = {
@@ -156,6 +164,7 @@ export const aiSessionStorage = {
       messages: [],
       createdAt: Date.now(),
       expiresAt: Date.now() + SESSION_EXPIRY_TIME,
+      sessionId: createSessionId(),
     };
     const key = aiSessionStorage.getSessionKey(productId);
     sessionStorage.setItem(key, JSON.stringify(session));
@@ -184,5 +193,46 @@ export const aiSessionStorage = {
     if (typeof window === 'undefined') return false;
     const session = aiSessionStorage.getSession(productId);
     return session !== null && Date.now() <= session.expiresAt;
+  },
+
+  getSessionId: (productId: string): string | null => {
+    const session = aiSessionStorage.getSession(productId);
+    return session?.sessionId || null;
+  },
+};
+
+// Product cache (offline-first)
+const PRODUCT_CACHE_PREFIX = 'smartcart_product_cache_';
+const PRODUCT_CACHE_TTL = 24 * 60 * 60 * 1000;
+
+export interface ProductCache<T> {
+  data: T;
+  cachedAt: number;
+}
+
+export const productCache = {
+  get: <T>(productId: string): ProductCache<T> | null => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const key = `${PRODUCT_CACHE_PREFIX}${productId}`;
+      const raw = localStorage.getItem(key);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as ProductCache<T>;
+      if (Date.now() - parsed.cachedAt > PRODUCT_CACHE_TTL) {
+        localStorage.removeItem(key);
+        return null;
+      }
+      return parsed;
+    } catch (error) {
+      console.error('Error reading product cache:', error);
+      return null;
+    }
+  },
+
+  set: <T>(productId: string, data: T) => {
+    if (typeof window === 'undefined') return;
+    const key = `${PRODUCT_CACHE_PREFIX}${productId}`;
+    const payload: ProductCache<T> = { data, cachedAt: Date.now() };
+    localStorage.setItem(key, JSON.stringify(payload));
   },
 };

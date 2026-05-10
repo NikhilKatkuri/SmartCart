@@ -1,21 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'next/navigation';
-import {
-  ShoppingCart,
-  Heart,
-  Star,
-  Loader,
-  Zap,
-  Check,
-  AlertCircle,
-} from 'lucide-react';
-import { productAPI } from '@/lib/api';
-import { useCart } from '@/hooks/useCart';
-import { useWishlist } from '@/hooks/useCart';
-import { AIChatSidebar } from '@/components/AIChatSidebar';
+import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import Link from 'next/link';
+import { ShoppingCart, Heart, Star, Sparkles, AlertCircle, X, SlidersHorizontal } from 'lucide-react';
+import { productAPI } from '@/lib/api';
+import { useCart, useWishlist } from '@/hooks/useCart';
+import { AIChatSidebar } from '@/components/AIChatSidebar';
+import { productCache } from '@/lib/storage';
+import { SkeletonCard } from '@/components/SkeletonCard';
 
 interface ProductDetail {
   _id: string;
@@ -36,6 +30,8 @@ interface ProductDetail {
   specifications: Record<string, string>;
   reviews: Array<{ rating: number; comment: string }>;
   variants: Array<{ variant_name: string; variant_value: string }>;
+  Img_URL?: string | null;
+  image_url?: string | null;
   knowledgeBase?: {
     short_description: string;
     long_description: string;
@@ -46,10 +42,17 @@ interface ProductDetail {
 
 export default function ProductDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const productId = params.id as string;
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
+  const [isCompareOpen, setIsCompareOpen] = useState(false);
+  const [compareCandidates, setCompareCandidates] = useState<ProductDetail[]>([]);
+  const [selectedCompareIds, setSelectedCompareIds] = useState<string[]>([]);
+  const [compareLimit, setCompareLimit] = useState(2);
+  const [isCompareLoading, setIsCompareLoading] = useState(false);
   const [selectedQuantity, setSelectedQuantity] = useState(1);
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
@@ -59,26 +62,67 @@ export default function ProductDetailPage() {
     setIsLoading(true);
     try {
       const response = await productAPI.getProductById(productId);
-      setProduct(response.product || response.data);
+      const resolved = response.product || response.data;
+      setProduct(resolved);
+      productCache.set(productId, resolved);
     } catch (error) {
       console.error('Error loading product:', error);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
-  }, [productId])
+  }, [productId]);
 
   useEffect(() => {
+    const cached = productCache.get<ProductDetail>(productId);
+    if (cached) {
+      setProduct(cached.data);
+      setIsLoading(false);
+      setIsRefreshing(true);
+    }
     loadProduct();
-  }, [loadProduct]);
+  }, [loadProduct, productId]);
 
+  useEffect(() => {
+    if (!isCompareOpen || !product?.category) return;
 
+    const loadSimilar = async () => {
+      setIsCompareLoading(true);
+      try {
+        const response = await productAPI.getAllProducts({
+          page: 1,
+          limit: 8,
+          category: product.category,
+        });
+        const items = (response.data || []) as ProductDetail[];
+        const filtered = items.filter((item) => item.product_id !== product.product_id);
+        setCompareCandidates(filtered);
+        setSelectedCompareIds([product.product_id]);
+      } catch (error) {
+        console.error('Error loading compare candidates:', error);
+      } finally {
+        setIsCompareLoading(false);
+      }
+    };
 
-  if (isLoading) {
+    loadSimilar();
+  }, [isCompareOpen, product?.category, product?.product_id]);
+
+  useEffect(() => {
+    setSelectedCompareIds((prev) => prev.slice(0, compareLimit));
+  }, [compareLimit]);
+
+  if (isLoading && !product) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <Loader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading product...</p>
+      <div className="min-h-screen max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+          <SkeletonCard />
+          <div className="space-y-6">
+            <div className="h-6 w-2/3 skeleton rounded-full" />
+            <div className="h-4 w-full skeleton rounded-full" />
+            <div className="h-4 w-5/6 skeleton rounded-full" />
+            <div className="h-10 w-1/3 skeleton rounded-full" />
+          </div>
         </div>
       </div>
     );
@@ -86,11 +130,11 @@ export default function ProductDetailPage() {
 
   if (!product) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
           <p className="text-gray-600 text-lg">Product not found</p>
-          <Link href="/" className="text-blue-600 hover:underline mt-4 inline-block">
+          <Link href="/" className="text-black hover:underline mt-4 inline-block">
             Back to Home
           </Link>
         </div>
@@ -99,259 +143,253 @@ export default function ProductDetailPage() {
   }
 
   const discountedPrice = Math.round(
-    product.price * (1 - product.discount_percentage / 100)
+    product.price * (1 - (product.discount_percentage || 0) / 100)
   );
-  const savingsAmount = product.price - discountedPrice;
+  const imageUrl = product.image_url || product.Img_URL || null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-gray-600 mb-8">
-          <Link href="/" className="hover:text-gray-900">
-            Home
-          </Link>
-          <span>/</span>
-          <Link href="/products" className="hover:text-gray-900">
-            {product.category}
-          </Link>
-          <span>/</span>
-          <span className="text-gray-900 font-medium">{product.product_title}</span>
+    <div className="min-h-screen max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="flex items-center justify-between text-sm text-muted mb-6">
+        <Link href="/" className="hover:text-primary">Discovery</Link>
+        {isRefreshing && <span className="text-xs">Syncing latest info...</span>}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <div className="glass-panel rounded-3xl overflow-hidden">
+          <div
+            className="relative aspect-4/5 bg-white/60"
+            style={{ viewTransitionName: `product-${product.product_id}` }}
+          >
+            {imageUrl ? (
+              <Image
+                src={imageUrl}
+                alt={product.product_title}
+                fill
+                sizes="(max-width: 1024px) 90vw, 40vw"
+                className="object-cover"
+                placeholder="blur"
+                blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjZWVlZWVlIi8+PC9zdmc+"
+                priority
+                unoptimized
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-xs tracking-[0.4em] text-muted">
+                {product.category}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Product Info Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-12">
-          {/* Product Image Placeholder */}
-          <div>
-            <div className="aspect-square bg-linear-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center relative overflow-hidden">
-              <div className="text-center text-gray-400 px-4">
-                <div className="text-6xl font-bold opacity-10">{product.category}</div>
-                <div className="text-sm opacity-20 mt-4">{product.product_title}</div>
-              </div>
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-[0.3em] text-muted">{product.brand} · {product.category}</p>
+            <h1 className="text-3xl md:text-4xl font-semibold">{product.product_title}</h1>
+            <p className="text-muted">{product.short_description}</p>
+          </div>
 
-              {/* Discount Badge */}
-              {product.discount_percentage > 0 && (
-                <div className="absolute top-6 left-6 bg-red-500 text-white px-3 py-1 rounded-lg font-bold text-lg">
-                  -{product.discount_percentage}%
-                </div>
-              )}
-            </div>
-
-            {/* Product Images Thumbnails */}
-            <div className="flex gap-4 mt-6">
-              {[1, 2, 3].map((i) => (
-                <div
+          <div className="flex items-center gap-2 text-sm text-muted">
+            <div className="flex items-center gap-1">
+              {[...Array(5)].map((_, i) => (
+                <Star
                   key={i}
-                  className="w-20 h-20 bg-gray-200 rounded-lg border-2 border-transparent hover:border-blue-500 cursor-pointer"
+                  size={14}
+                  className={i < Math.floor(product.rating) ? 'fill-black text-black' : 'text-gray-300'}
                 />
               ))}
             </div>
+            <span>{product.rating} · {product.review_count} reviews</span>
           </div>
 
-          {/* Product Details */}
-          <div className="space-y-6">
-            {/* Brand & Title */}
-            <div>
-              <p className="text-blue-600 font-semibold mb-2">{product.brand}</p>
-              <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
-                {product.product_title}
-              </h1>
-              <p className="text-gray-600">{product.short_description}</p>
-            </div>
+          <div className="flex items-baseline gap-3">
+            <span className="text-3xl font-semibold">
+              {product.currency || '₹'}{discountedPrice.toLocaleString()}
+            </span>
+            {product.discount_percentage > 0 && (
+              <span className="text-sm text-muted line-through">
+                {product.currency || '₹'}{product.price.toLocaleString()}
+              </span>
+            )}
+          </div>
 
-            {/* Rating */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    size={20}
-                    className={
-                      i < Math.floor(product.rating)
-                        ? 'fill-yellow-400 text-yellow-400'
-                        : 'text-gray-300'
-                    }
-                  />
-                ))}
-              </div>
-              <div>
-                <p className="font-semibold text-gray-900">
-                  {product.rating} out of 5
-                </p>
-                <p className="text-gray-600">({product.review_count} reviews)</p>
-              </div>
-            </div>
-
-            {/* Price Section */}
-            <div className="border-t border-b border-gray-200 py-6">
-              <div className="flex items-baseline gap-3 mb-4">
-                <span className="text-4xl font-bold text-gray-900">
-                  {product.currency}{discountedPrice.toLocaleString()}
-                </span>
-                <span className="text-xl text-gray-400 line-through">
-                  {product.currency}{product.price.toLocaleString()}
-                </span>
-                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full font-semibold">
-                  Save {product.currency}{savingsAmount.toLocaleString()}
-                </span>
-              </div>
-
-              {/* Stock Status */}
-              <div className="flex items-center gap-2">
-                {product.stock_quantity > 0 ? (
-                  <>
-                    <Check size={20} className="text-green-600" />
-                    <span className="text-green-600 font-medium">In Stock</span>
-                  </>
-                ) : (
-                  <>
-                    <AlertCircle size={20} className="text-red-600" />
-                    <span className="text-red-600 font-medium">Out of Stock</span>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Quantity & Actions */}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Quantity
-                </label>
-                <select
-                  value={selectedQuantity}
-                  onChange={(e) => setSelectedQuantity(parseInt(e.target.value))}
-                  className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((qty) => (
-                    <option key={qty} value={qty}>
-                      {qty}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3">
-                <button
-                  onClick={() => addToCart(productId, selectedQuantity)}
-                  disabled={product.stock_quantity === 0}
-                  className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-400 flex items-center justify-center gap-2"
-                >
-                  <ShoppingCart size={20} />
-                  Add to Cart
-                </button>
-
-                <button
-                  onClick={() => toggleWishlist(productId)}
-                  className="flex-1 border border-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:border-red-500 hover:text-red-500 transition-colors flex items-center justify-center gap-2"
-                >
-                  <Heart size={20} fill={inWishlist ? 'currentColor' : 'none'} />
-                  {inWishlist ? 'Saved' : 'Save'}
-                </button>
-              </div>
-
-              {/* Compare Button */}
-              <Link
-                href={`/compare?products=${productId}`}
-                className="w-full text-center bg-gray-100 text-gray-900 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+          <div className="flex items-center gap-4">
+            <label className="text-sm text-muted">Quantity</label>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelectedQuantity(Math.max(1, selectedQuantity - 1))}
+                className="h-9 w-9 rounded-full border border-white/60 bg-white/80"
               >
-                <Zap size={20} />
-                Compare (Add 2+ products)
-              </Link>
+                -
+              </button>
+              <span className="w-6 text-center">{selectedQuantity}</span>
+              <button
+                onClick={() => setSelectedQuantity(selectedQuantity + 1)}
+                className="h-9 w-9 rounded-full border border-white/60 bg-white/80"
+              >
+                +
+              </button>
             </div>
+          </div>
 
-            {/* AI Chat Button */}
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => addToCart(product.product_id, selectedQuantity)}
+              className="px-6 py-3 rounded-full bg-black text-white text-sm tracking-wide hover:bg-black/90"
+            >
+              <span className="inline-flex items-center gap-2">
+                <ShoppingCart size={16} /> Add to cart
+              </span>
+            </button>
+            <button
+              onClick={() => toggleWishlist(product.product_id)}
+              className="px-6 py-3 rounded-full border border-white/60 bg-white/80 text-sm"
+            >
+              <span className="inline-flex items-center gap-2">
+                <Heart size={16} className={inWishlist ? 'fill-red-500 text-red-500' : ''} />
+                {inWishlist ? 'Saved' : 'Save'}
+              </span>
+            </button>
             <button
               onClick={() => setIsAIChatOpen(true)}
-              className="w-full bg-linear-to-r from-purple-600 to-pink-600 text-white py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all"
+              className="px-6 py-3 rounded-full border border-black/10 bg-black/5 text-sm"
             >
-              💬 Ask AI About This Product
+              <span className="inline-flex items-center gap-2">
+                <Sparkles size={16} /> Ask AI
+              </span>
+            </button>
+            <button
+              onClick={() => setIsCompareOpen(true)}
+              className="px-6 py-3 rounded-full border border-black/10 bg-white/80 text-sm"
+            >
+              <span className="inline-flex items-center gap-2">
+                <SlidersHorizontal size={16} /> Compare
+              </span>
             </button>
           </div>
-        </div>
 
-        {/* Tabs Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-12">
-          {/* Description */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg border border-gray-200 p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Description</h2>
-              <p className="text-gray-600 leading-relaxed">{product.long_description}</p>
-
-              {/* Tags */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <p className="font-semibold text-gray-900 mb-3">Tags:</p>
-                <div className="flex flex-wrap gap-2">
-                  {product.tags?.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Specifications */}
-          <div>
-            <div className="bg-white rounded-lg border border-gray-200 p-8 sticky top-24">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Specifications</h2>
-              <div className="space-y-4">
-                {product.specifications &&
-                  Object.entries(product.specifications).map(([key, value]) => (
-                    <div key={key} className="border-b border-gray-100 pb-4 last:border-0">
-                      <p className="text-sm font-semibold text-gray-900 capitalize">
-                        {key.replace(/_/g, ' ')}
-                      </p>
-                      <p className="text-sm text-gray-600 mt-1">{value}</p>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Reviews Section */}
-        <div className="mt-12 bg-white rounded-lg border border-gray-200 p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Customer Reviews</h2>
-
-          {product.reviews && product.reviews.length > 0 ? (
-            <div className="space-y-6">
-              {product.reviews.slice(0, 5).map((review, index) => (
-                <div key={index} className="border-b border-gray-100 pb-6 last:border-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        size={16}
-                        className={
-                          i < review.rating
-                            ? 'fill-yellow-400 text-yellow-400'
-                            : 'text-gray-300'
-                        }
-                      />
-                    ))}
-                  </div>
-                  <p className="text-gray-700">{review.comment}</p>
+          <div className="glass-panel rounded-3xl p-6 space-y-4">
+            <h2 className="text-sm uppercase tracking-[0.3em] text-muted">Details</h2>
+            <p className="text-sm leading-relaxed text-muted">{product.long_description}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              {Object.entries(product.specifications || {}).slice(0, 6).map(([key, value]) => (
+                <div key={key} className="flex flex-col gap-1">
+                  <span className="text-xs uppercase tracking-[0.2em] text-muted">{key}</span>
+                  <span>{value}</span>
                 </div>
               ))}
             </div>
-          ) : (
-            <p className="text-gray-600">No reviews yet</p>
-          )}
+          </div>
+
+          <div className="glass-panel rounded-3xl p-6 space-y-4">
+            <h2 className="text-sm uppercase tracking-[0.3em] text-muted">Reviews</h2>
+            <div className="space-y-3">
+              {(product.reviews || []).slice(0, 3).map((review, idx) => (
+                <div key={`${review.comment}-${idx}`} className="border-b border-white/40 pb-3">
+                  <div className="flex items-center gap-2 text-xs text-muted">
+                    <Star size={12} className="fill-black text-black" /> {review.rating}
+                  </div>
+                  <p className="text-sm">{review.comment}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* AI Chat Sidebar */}
       <AIChatSidebar
-        productId={productId}
+        productId={product.product_id}
         isOpen={isAIChatOpen}
         onClose={() => setIsAIChatOpen(false)}
       />
+
+      {isCompareOpen && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setIsCompareOpen(false)} />
+          <div className="absolute left-1/2 top-10 w-[min(92vw,720px)] -translate-x-1/2 glass-panel rounded-3xl p-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-muted">Compare</p>
+                <h3 className="text-lg font-semibold">Select similar products</h3>
+              </div>
+              <button
+                onClick={() => setIsCompareOpen(false)}
+                className="h-9 w-9 rounded-full bg-white/70 flex items-center justify-center"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3 text-sm text-muted">
+              <span>Compare up to</span>
+              <select
+                value={compareLimit}
+                onChange={(e) => setCompareLimit(Number(e.target.value))}
+                className="px-3 py-2 rounded-full border border-white/60 bg-white/80"
+              >
+                <option value={2}>2 products</option>
+                <option value={3}>3 products</option>
+              </select>
+              <span className="text-xs">(Current product is included)</span>
+            </div>
+
+            {isCompareLoading ? (
+              <div className="text-sm text-muted">Loading similar products...</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {compareCandidates.map((item) => {
+                  const isSelected = selectedCompareIds.includes(item.product_id);
+                  const isDisabled =
+                    !isSelected && selectedCompareIds.length >= compareLimit;
+                  return (
+                    <label
+                      key={item.product_id}
+                      className={`flex items-start gap-3 rounded-2xl border p-4 cursor-pointer transition ${
+                        isSelected ? 'border-black bg-white/80' : 'border-white/60 bg-white/60'
+                      } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="mt-1"
+                        checked={isSelected}
+                        disabled={isDisabled}
+                        onChange={() => {
+                          setSelectedCompareIds((prev) => {
+                            if (prev.includes(item.product_id)) {
+                              return prev.filter((id) => id !== item.product_id);
+                            }
+                            return [...prev, item.product_id];
+                          });
+                        }}
+                      />
+                      <div>
+                        <div className="text-sm font-medium">{item.product_title}</div>
+                        <div className="text-xs text-muted">{item.brand}</div>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between pt-2">
+              <div className="text-xs text-muted">
+                Selected {selectedCompareIds.length} of {compareLimit}
+              </div>
+              <button
+                onClick={() => {
+                  const ids = selectedCompareIds.length
+                    ? selectedCompareIds
+                    : [product.product_id];
+                  router.push(`/compare?products=${ids.join(',')}`);
+                }}
+                disabled={selectedCompareIds.length < 2}
+                className="px-6 py-2 rounded-full bg-black text-white text-sm disabled:bg-gray-300"
+              >
+                Compare
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
